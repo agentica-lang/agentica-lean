@@ -14,10 +14,14 @@ by the kernel. `native_decide` and `bv_decide` add an axiom per use
 code, the decision procedure or the LRAT checker of `bv_decide`. The check
 rejects both.
 
+It also fails on escapes that add no axiom but skip the kernel or replace the
+code: an `unsafe` constant, and a constant with `@[implemented_by]` or
+`@[extern]` (also when set later with `attribute [...]`). The option
+`debug.skipKernelTC` leaves no trace on a constant; `scripts/check.sh` greps
+for it.
+
 It sees only the modules that `Spec.lean` imports; `scripts/check.sh` fails
-when a file under `Spec/` is missing there. Escapes that add no axiom
-(`debug.skipKernelTC`, `implemented_by`, `extern`, `unsafe`) are caught by
-`scripts/check.sh` too.
+when a file under `Spec/` is missing there.
 -/
 
 open Lean Elab Command
@@ -34,12 +38,18 @@ def moduleOf (env : Environment) (n : Name) : Option Name := do
 run_cmd do
   let env ← getEnv
   let mut bad : Array MessageData := #[]
-  for (n, _) in env.constants.map₁.toList do
+  for (n, info) in env.constants.map₁.toList do
     let some m := moduleOf env n | continue
     unless (`Spec).isPrefixOf m do continue
+    if info.isUnsafe then
+      bad := bad.push m!"{n} is unsafe"
+    if (Compiler.getImplementedBy? env n).isSome then
+      bad := bad.push m!"{n} has implemented_by"
+    if isExtern env n then
+      bad := bad.push m!"{n} is extern"
     let axioms ← collectAxioms n
     let extra := axioms.filter (fun a => !allowedAxioms.contains a)
     unless extra.isEmpty do
       bad := bad.push m!"{n} uses {extra.toList}"
   unless bad.isEmpty do
-    throwError m!"declarations with axioms outside the allowed list:\n{MessageData.joinSep bad.toList "\n"}"
+    throwError m!"declarations with axioms outside the allowed list, or with escapes:\n{MessageData.joinSep bad.toList "\n"}"

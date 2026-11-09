@@ -15,7 +15,7 @@ Check/Axioms.lean  fails the build when a Spec declaration uses an axiom
                  other than propext, Classical.choice and Quot.sound
 scripts/check.sh the checks around the build (imports, escapes, self-test)
 tests/AxiomFixture.lean  bad proofs that the axiom check must reject
-.github/         CI: elan, then `lake build --wfail`
+.github/         CI: elan, `lake build --wfail`, then `scripts/check.sh`
 ```
 
 ## Commands
@@ -32,9 +32,9 @@ tests/AxiomFixture.lean  bad proofs that the axiom check must reject
   compiled LRAT checker. Use `bv_omega`, `omega`, `simp` with `BitVec`
   lemmas, or `decide +kernel`. CI fails on a warning, and `Check/Axioms.lean`
   fails on any axiom but `propext`, `Classical.choice` and `Quot.sound`.
-- No escapes that add no axiom: `set_option debug.skipKernelTC`,
-  `@[implemented_by]`, `@[extern]`, `unsafe`. `scripts/check.sh` fails on
-  them under `Spec/`.
+- No escapes that add no axiom: `unsafe`, `@[implemented_by]`, `@[extern]`
+  (`Check/Axioms.lean` fails on them) and `set_option debug.skipKernelTC`
+  (`scripts/check.sh` fails on it).
 - `Spec.lean` imports every file under `Spec/`; `scripts/check.sh` fails
   otherwise.
 - No Mathlib unless a proof needs it; then the PR says why.

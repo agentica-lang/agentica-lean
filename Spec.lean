@@ -1,3 +1,6 @@
+-- The imports of every module under Spec/ go here, at the top of the file:
+-- an import below the module doc would not parse.
+
 /-!
 # Agentica builtin specifications
 
