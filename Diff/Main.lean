@@ -84,7 +84,7 @@ def randomBytes (s : UInt64) : List UInt8 × UInt64 := Id.run do
   let (n, s0) := next s
   let mut s := s0
   let mut out : List UInt8 := []
-  for _ in [0:(n.toNat % 7)] do
+  for _ in [0:(n.toNat % 13)] do
     let (b, s') := next s
     s := s'
     out := out ++ [b.toUInt8]
@@ -119,13 +119,21 @@ def unaryCases (a : Int) : List Case :=
    { fn := "from_int", args := [toString a],
      expected := s!"text {String.from_int (AInt.ofInt a)}" }]
 
+/-- The other readers of `std/binary`, translated by hand in `Agentica/Design/`. -/
+def readers : List (String × (Bytes → AInt → M (Result AInt))) :=
+  [("read_u16_be", Design.read_u16_be), ("read_u32_le", Design.read_u32_le),
+   ("read_u64_le", Design.read_u64_le), ("read_i64_le", Design.read_i64_le),
+   ("read_i16_le", Design.read_i16_le), ("read_i32_le", Design.read_i32_le)]
+
 def bytesCases (b : List UInt8) (i : Int) : List Case :=
   let bytes := toBytes b
   [{ fn := "length", args := [showBytes b], expected := s!"int {showInt (Bytes.length bytes)}" },
    { fn := "at", args := [showBytes b, toString i],
      expected := showM (Bytes.at bytes (AInt.ofInt i)) },
    { fn := "read_u16_le", args := [showBytes b, toString i],
-     expected := showResult (Design.read_u16_le bytes (AInt.ofInt i)) }]
+     expected := showResult (Design.read_u16_le bytes (AInt.ofInt i)) }] ++
+  readers.map fun (fn, f) =>
+    { fn, args := [showBytes b, toString i], expected := showResult (f bytes (AInt.ofInt i)) }
 
 /-- The fixed cases: the edges of every function. -/
 def fixedCases : List Case := Id.run do
@@ -146,7 +154,16 @@ def fixedCases : List Case := Id.run do
   let sample : List UInt8 := [1, 2, 255]
   for i in [-1, 0, 1, 2, 3, intMax, intMin] do
     out := out ++ bytesCases sample i
+  -- Ten bytes, with the sign bit set at several places, so every reader has
+  -- in-range offsets, negative values and a u64 above Int.MAX.
+  let long : List UInt8 := [1, 2, 255, 128, 0, 127, 254, 129, 200, 3]
+  for i in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] do
+    out := out ++ bytesCases long i
   out := out ++ bytesCases [] 0
+  -- The sign edges of each reader, at offset 0.
+  for b in [[0, 0, 0, 0, 0, 0, 0, 127], [0, 0, 0, 0, 0, 0, 0, 128], [255, 127], [0, 128],
+      [255, 255, 255, 127], [0, 0, 0, 128], List.replicate 8 255] do
+    out := out ++ bytesCases b 0
   return out
 
 /-- Random cases from a fixed seed: `perFunction` for each function. -/

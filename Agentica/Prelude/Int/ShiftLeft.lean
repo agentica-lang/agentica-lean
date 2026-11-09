@@ -51,6 +51,19 @@ theorem shift_left_of_neg (a count : AInt) (h : count.bits.toInt < 0) :
     AInt.shift_left a count = .error .invalidCount := by
   simp only [shift_left, h, ↓reduceIte]
 
+/-- A shift by a literal count from 0 to 63 never halts. -/
+theorem shift_left_lit (k : Nat) (hk : k < 64) :
+    ∀ x : AInt, AInt.shift_left x (AInt.ofInt k) = pure ⟨x.bits <<< k⟩ := by
+  intro x
+  have hki : (AInt.ofInt k).bits.toInt = k := AInt.ofInt_toInt (by omega)
+  have hkn : (AInt.ofInt k).bits.toNat = k := by
+    have := AInt.toInt_eq_toNat_of_nonneg (x := (AInt.ofInt k).bits) (by omega)
+    omega
+  have h1 : ¬ (AInt.ofInt k).bits.toInt < 0 := by omega
+  have h2 : ¬ k ≥ 64 := by omega
+  simp only [AInt.shift_left, h1, hkn, h2, ↓reduceIte]
+  rfl
+
 /-! The count cases, checked by the kernel (`rfl`). The values were compared
 with agentica 0.24.1 by hand. -/
 

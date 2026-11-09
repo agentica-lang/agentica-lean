@@ -85,7 +85,35 @@ def call_at(data: Bytes, i: Int) -> String
 end
 
 def call_read_u16_le(data: Bytes, offset: Int) -> String
-  found = Binary.read_u16_le(data, offset)
+  return result_text(Binary.read_u16_le(data, offset))
+end
+
+def call_read_u16_be(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_u16_be(data, offset))
+end
+
+def call_read_u32_le(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_u32_le(data, offset))
+end
+
+def call_read_u64_le(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_u64_le(data, offset))
+end
+
+def call_read_i64_le(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_i64_le(data, offset))
+end
+
+def call_read_i16_le(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_i16_le(data, offset))
+end
+
+def call_read_i32_le(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_i32_le(data, offset))
+end
+
+# The text of a reader's Result. It never halts.
+def result_text(found: Result[Int]) -> String
   if found.ok?
     return "ok #{found.unwrap!}"
   end
@@ -99,7 +127,8 @@ def arity(name: String) -> Int
     return 1
   end
   two = ["add", "sub", "bit_and", "bit_or", "bit_xor", "shift_left", "shift_right",
-    "shift_right_unsigned", "eq", "ne", "lt", "le", "gt", "ge", "at", "read_u16_le"]
+    "shift_right_unsigned", "eq", "ne", "lt", "le", "gt", "ge", "at", "read_u16_le", "read_u16_be",
+    "read_u32_le", "read_u64_le", "read_i64_le", "read_i16_le", "read_i32_le"]
   if two.any? do |x| x == name end
     return 2
   end
@@ -107,7 +136,7 @@ def arity(name: String) -> Int
 end
 
 def takes_bytes(name: String) -> Bool
-  return name == "length" or name == "at" or name == "read_u16_le"
+  return name == "length" or name == "at" or name.starts_with?("read_")
 end
 
 # The bytes of a comma list (`-` for none), or an error.
@@ -152,6 +181,18 @@ def run_case(name: String, args: List[String]) -> String
     return call_at(data, ints[0])
   elsif name == "read_u16_le"
     return call_read_u16_le(data, ints[0])
+  elsif name == "read_u16_be"
+    return call_read_u16_be(data, ints[0])
+  elsif name == "read_u32_le"
+    return call_read_u32_le(data, ints[0])
+  elsif name == "read_u64_le"
+    return call_read_u64_le(data, ints[0])
+  elsif name == "read_i64_le"
+    return call_read_i64_le(data, ints[0])
+  elsif name == "read_i16_le"
+    return call_read_i16_le(data, ints[0])
+  elsif name == "read_i32_le"
+    return call_read_i32_le(data, ints[0])
   elsif name == "bit_not"
     return call_bit_not(ints[0])
   elsif name == "from_int"

@@ -50,6 +50,10 @@ def Bytes.at (b : Bytes) (i : AInt) : M AInt :=
   if h : i.bits.toInt < 0 ∨ b.data.size ≤ i.bits.toNat then .error .indexOutOfRange
   else .ok ⟨BitVec.ofNat 64 (b.data[i.bits.toNat]'(by omega)).toNat⟩
 
+/-- The byte at `i` as a number, 0 outside the bytes. Not a builtin: theorem
+statements use it. -/
+def Bytes.byte (b : Bytes) (i : Nat) : Nat := (b.data[i]!).toNat
+
 namespace Bytes
 
 /-- The length is the number of bytes, as a signed value. -/
@@ -77,6 +81,9 @@ theorem at_ge_length (b : Bytes) (i : AInt) (h : b.data.size ≤ i.bits.toInt) :
   have := AInt.toInt_eq_toNat_of_nonneg (x := i.bits) (by omega)
   have hc : i.bits.toInt < 0 ∨ b.data.size ≤ i.bits.toNat := by omega
   simp only [Bytes.at, hc, ↓reduceDIte]
+
+/-- A byte is below 256. -/
+theorem byte_lt (b : Bytes) (i : Nat) : b.byte i < 256 := UInt8.toNat_lt _
 
 /-- A byte read is an `Int` from 0 to 255. -/
 theorem at_range (b : Bytes) (i v : AInt) (h : Bytes.at b i = .ok v) :
