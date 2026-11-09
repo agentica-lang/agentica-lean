@@ -112,6 +112,34 @@ def call_read_i32_le(data: Bytes, offset: Int) -> String
   return result_text(Binary.read_i32_le(data, offset))
 end
 
+def call_read_u8(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_u8(data, offset))
+end
+
+def call_read_i8(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_i8(data, offset))
+end
+
+def call_read_u32_be(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_u32_be(data, offset))
+end
+
+def call_read_u64_be(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_u64_be(data, offset))
+end
+
+def call_read_i16_be(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_i16_be(data, offset))
+end
+
+def call_read_i32_be(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_i32_be(data, offset))
+end
+
+def call_read_i64_be(data: Bytes, offset: Int) -> String
+  return result_text(Binary.read_i64_be(data, offset))
+end
+
 # The text of a reader's Result. It never halts.
 def result_text(found: Result[Int]) -> String
   if found.ok?
@@ -121,14 +149,15 @@ def result_text(found: Result[Int]) -> String
 end
 
 # The number of arguments of each function, the first one a Bytes for the
-# last three; -1 for a name the harness does not know.
+# readers, `length` and `at`; -1 for a name the harness does not know.
 def arity(name: String) -> Int
   if name == "bit_not" or name == "from_int" or name == "length"
     return 1
   end
   two = ["add", "sub", "bit_and", "bit_or", "bit_xor", "shift_left", "shift_right",
     "shift_right_unsigned", "eq", "ne", "lt", "le", "gt", "ge", "at", "read_u16_le", "read_u16_be",
-    "read_u32_le", "read_u64_le", "read_i64_le", "read_i16_le", "read_i32_le"]
+    "read_u32_le", "read_u64_le", "read_i64_le", "read_i16_le", "read_i32_le", "read_u8", "read_i8",
+    "read_u32_be", "read_u64_be", "read_i16_be", "read_i32_be", "read_i64_be"]
   if two.any? do |x| x == name end
     return 2
   end
@@ -193,6 +222,20 @@ def run_case(name: String, args: List[String]) -> String
     return call_read_i16_le(data, ints[0])
   elsif name == "read_i32_le"
     return call_read_i32_le(data, ints[0])
+  elsif name == "read_u8"
+    return call_read_u8(data, ints[0])
+  elsif name == "read_i8"
+    return call_read_i8(data, ints[0])
+  elsif name == "read_u32_be"
+    return call_read_u32_be(data, ints[0])
+  elsif name == "read_u64_be"
+    return call_read_u64_be(data, ints[0])
+  elsif name == "read_i16_be"
+    return call_read_i16_be(data, ints[0])
+  elsif name == "read_i32_be"
+    return call_read_i32_be(data, ints[0])
+  elsif name == "read_i64_be"
+    return call_read_i64_be(data, ints[0])
   elsif name == "bit_not"
     return call_bit_not(ints[0])
   elsif name == "from_int"
