@@ -1,5 +1,7 @@
 import Agentica.Prelude.Int.Arith
+import Agentica.Prelude.Int.Bits
 import Agentica.Prelude.Int.Compare
+import Agentica.Prelude.Int.ShiftLeft
 
 /-!
 # Design target: `read_u16_le` of `std/binary`, translated by hand
@@ -10,9 +12,9 @@ This file is a **hand translation**. It shows the Lean that the translator of
 reproduce the three definitions; the file goes away when it does.
 
 It uses the prelude where the prelude has the piece: `RuntimeError`, `M`,
-`AInt.add`, `AInt.sub` and the comparisons. The other pieces below (`Result`,
-`Bytes`, `AInt.bit_or`, `AInt.shift_left`, `AInt.to_s`) are drafts in this
-namespace only. Each moves to `Agentica/Prelude/` in its own PR, with its VM
+`AInt.add`, `AInt.sub`, the comparisons, `AInt.bit_or` and
+`AInt.shift_left`. The other pieces below (`Result`, `Bytes`, `AInt.to_s`)
+are drafts in this namespace only. Each moves to `Agentica/Prelude/` in its own PR, with its VM
 contract, and this file then uses it from there.
 -/
 
@@ -26,16 +28,6 @@ inductive Result (α : Type) where
   | ok (value : α)
   | error (message : String)
   deriving DecidableEq, Repr
-
-/-- `Int.bit_or`. -/
-def AInt.bit_or (a b : AInt) : AInt := ⟨a.bits ||| b.bits⟩
-
-/-- `Int.shift_left`: the low 64 bits (`vm/numbers.c`,
-`builtin_int_shift_left`). -/
-def AInt.shift_left (a count : AInt) : M AInt :=
-  if count.bits.toInt < 0 then .error .invalidCount
-  else if count.bits.toNat ≥ 64 then pure ⟨0⟩
-  else pure ⟨a.bits <<< count.bits.toNat⟩
 
 /-- An `Int` in a string interpolation: its decimal digits (`vm/text.c`,
 `snprintf` with `PRId64`). -/
