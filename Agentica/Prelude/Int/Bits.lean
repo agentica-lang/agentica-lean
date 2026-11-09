@@ -58,6 +58,53 @@ theorem or_shift_8 (lo hi : Nat) (hlo : lo < 256) (hhi : hi < 256) :
     Nat.mod_eq_of_lt (by omega), Nat.mul_comm hi, ← Nat.two_pow_add_eq_or_of_lt (by omega)]
   omega
 
+/-- `X * 2^j` and `c < 2^j`, both shifted left by `k`: their OR is their sum. -/
+theorem nat_or_shift (X c j k : Nat) (hc : c < 2 ^ j) :
+    X * 2 ^ j * 2 ^ k ||| c * 2 ^ k = (X * 2 ^ j + c) * 2 ^ k := by
+  have h := Nat.two_pow_add_eq_or_of_lt hc X
+  calc X * 2 ^ j * 2 ^ k ||| c * 2 ^ k = (X * 2 ^ j) <<< k ||| c <<< k := by
+        simp only [Nat.shiftLeft_eq]
+    _ = (X * 2 ^ j ||| c) <<< k := Nat.shiftLeft_or_distrib.symm
+    _ = (X * 2 ^ j + c) <<< k := by rw [Nat.mul_comm X, h]
+    _ = (X * 2 ^ j + c) * 2 ^ k := Nat.shiftLeft_eq _ _
+
+/-- Four bytes ORed as the little-endian readers do, on `Nat`. -/
+theorem nat_or_bytes4 (a b c d : Nat) (ha : a < 256) (hb : b < 256) (hc : c < 256)
+    (_hd : d < 256) :
+    ((d * 2 ^ 24 ||| c * 2 ^ 16) ||| b * 2 ^ 8) ||| a =
+      a + 2 ^ 8 * b + 2 ^ 16 * c + 2 ^ 24 * d := by
+  have e1 : d * 2 ^ 24 ||| c * 2 ^ 16 = (d * 2 ^ 8 + c) * 2 ^ 16 := by
+    rw [show d * 2 ^ 24 = d * 2 ^ 8 * 2 ^ 16 by omega]
+    exact nat_or_shift d c 8 16 hc
+  have e2 : (d * 2 ^ 8 + c) * 2 ^ 16 ||| b * 2 ^ 8 = ((d * 2 ^ 8 + c) * 2 ^ 8 + b) * 2 ^ 8 := by
+    rw [show (d * 2 ^ 8 + c) * 2 ^ 16 = (d * 2 ^ 8 + c) * 2 ^ 8 * 2 ^ 8 by omega]
+    exact nat_or_shift _ b 8 8 hb
+  have e3 := Nat.two_pow_add_eq_or_of_lt (i := 8) (b := a) ha ((d * 2 ^ 8 + c) * 2 ^ 8 + b)
+  rw [e1, e2, Nat.mul_comm _ (2 ^ 8), ← e3]
+  omega
+
+/-- The four bytes of a little-endian 32-bit value, as the readers OR them. -/
+theorem or_bytes4 (a b c d : Nat) (ha : a < 256) (hb : b < 256) (hc : c < 256)
+    (hd : d < 256) :
+    (((BitVec.ofNat 64 d <<< 24 ||| BitVec.ofNat 64 c <<< 16) ||| BitVec.ofNat 64 b <<< 8) |||
+      BitVec.ofNat 64 a) = BitVec.ofNat 64 (a + 2 ^ 8 * b + 2 ^ 16 * c + 2 ^ 24 * d) := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_or, BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, Nat.shiftLeft_eq]
+  rw [Nat.mod_eq_of_lt (a := d) (by omega), Nat.mod_eq_of_lt (a := c) (by omega),
+    Nat.mod_eq_of_lt (a := b) (by omega), Nat.mod_eq_of_lt (a := a) (by omega),
+    Nat.mod_eq_of_lt (a := d * 2 ^ 24) (by omega), Nat.mod_eq_of_lt (a := c * 2 ^ 16) (by omega),
+    Nat.mod_eq_of_lt (a := b * 2 ^ 8) (by omega), nat_or_bytes4 a b c d ha hb hc hd,
+    Nat.mod_eq_of_lt (by omega)]
+
+/-- Two 32-bit halves, the high one shifted by 32. -/
+theorem or_halves (lo hi : Nat) (hlo : lo < 2 ^ 32) (hhi : hi < 2 ^ 32) :
+    (BitVec.ofNat 64 hi <<< 32 ||| BitVec.ofNat 64 lo) = BitVec.ofNat 64 (lo + 2 ^ 32 * hi) := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_or, BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, Nat.shiftLeft_eq]
+  rw [Nat.mod_eq_of_lt (a := hi) (by omega), Nat.mod_eq_of_lt (a := lo) (by omega),
+    Nat.mod_eq_of_lt (a := hi * 2 ^ 32) (by omega), Nat.mul_comm hi,
+    ← Nat.two_pow_add_eq_or_of_lt hlo, Nat.mod_eq_of_lt (by omega)]
+  omega
 /-! Examples, checked by the kernel (`rfl`). The values were compared with
 agentica 0.24.1 by hand. -/
 
