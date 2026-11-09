@@ -16,6 +16,9 @@ Agentica/        the checked Lean code: Prelude/ (the model of the VM),
   Prelude/Int.lean  AInt (an Agentica Int: a structure of 64 bits) and
                  RuntimeError
   Prelude/Int/<Method>.lean  one builtin of Int, with its theorems
+  Design/          hand translations: the output the translator must
+                 reproduce (docs/translator.md)
+docs/translator.md  the design of the translator
 Check/Axioms.lean  fails the build when an Agentica declaration uses an axiom
                  other than propext, Classical.choice and Quot.sound
 scripts/check.sh the checks around the build (imports, escapes, self-test)
