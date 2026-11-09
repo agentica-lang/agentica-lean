@@ -13,6 +13,8 @@ lakefile.toml    the Lake project: the `Agentica` and `Check` libraries
 Agentica.lean    the library root; imports every module under Agentica/
 Agentica/        the checked Lean code: Prelude/ (the model of the VM),
                  later the translations and their proofs
+  Prelude/Int.lean  AInt (an Agentica Int: BitVec 64) and RuntimeError
+  Prelude/Int/<Method>.lean  one builtin of Int, with its theorems
 Check/Axioms.lean  fails the build when an Agentica declaration uses an axiom
                  other than propext, Classical.choice and Quot.sound
 scripts/check.sh the checks around the build (imports, escapes, self-test)
@@ -43,8 +45,12 @@ tests/AxiomFixture.lean  bad proofs that the axiom check must reject
 - A builtin in the prelude follows the real contract: read the VM code
   (`vm/`), the catalog row (`compiler/catalog/builtins_data.agc`) and the
   site page (`site/content/library/`) of agentica first.
-- An Agentica `Int` is a `BitVec 64`. A runtime error is its diagnostic code
-  (`RUNTIME-...`), never its message.
+- An Agentica `Int` is `AInt` (a `BitVec 64`; `toInt` reads it as signed). A
+  builtin that can fail returns `Except RuntimeError`, one constructor per
+  diagnostic code (`RUNTIME-...`), never its message.
+- A builtin keeps its Agentica name: `Int.shift_right_unsigned` is
+  `AInt.shift_right_unsigned`. Its definition follows the C code step by step,
+  and its doc comment names the C function.
 - Differential tests compare values and diagnostic codes, never message text.
 - Translated files are generated: change the translator or the `.agc` source,
   never the output by hand.

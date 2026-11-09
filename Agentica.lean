@@ -1,5 +1,7 @@
 -- The imports of every module under Agentica/ go here, at the top of the file:
 -- an import below the module doc would not parse.
+import Agentica.Prelude.Int
+import Agentica.Prelude.Int.ShiftRightUnsigned
 
 /-!
 # Agentica in Lean
