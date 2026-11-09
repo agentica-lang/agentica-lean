@@ -8,9 +8,16 @@ Building this module fails when a declaration of the `Spec` library depends on
 an axiom outside `allowedAxioms`. It catches a `sorry` (`sorryAx`) even where
 `--wfail` would not, for example one hidden behind a macro, and a new `axiom`.
 
-Only the three standard axioms of Lean are allowed. `bv_decide` needs no
-other: the kernel checks its certificate. `native_decide` adds an axiom per
-use (it trusts the compiled code), so the check rejects it.
+Only the three standard axioms of Lean are allowed, so every proof is checked
+by the kernel. `native_decide` and `bv_decide` add an axiom per use
+(`_native.native_decide.ax_*`, `_native.bv_decide.ax_*`): they trust compiled
+code, the decision procedure or the LRAT checker of `bv_decide`. The check
+rejects both.
+
+It sees only the modules that `Spec.lean` imports; `scripts/check.sh` fails
+when a file under `Spec/` is missing there. Escapes that add no axiom
+(`debug.skipKernelTC`, `implemented_by`, `extern`, `unsafe`) are caught by
+`scripts/check.sh` too.
 -/
 
 open Lean Elab Command

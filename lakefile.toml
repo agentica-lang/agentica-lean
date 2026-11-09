@@ -2,8 +2,11 @@ name = "agentica-lean"
 version = "0.1.0"
 defaultTargets = ["Spec", "Check"]
 
+# `Spec.*` is Spec and every module under Spec/: each is built, even one that
+# Spec.lean does not import. (`Spec.+` would leave out Spec itself.)
 [[lean_lib]]
 name = "Spec"
+globs = ["Spec.*"]
 
 # Checks the axioms of every Spec declaration (Check/Axioms.lean).
 [[lean_lib]]

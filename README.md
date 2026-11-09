@@ -27,7 +27,13 @@ Install [elan](https://github.com/leanprover/elan); it reads the Lean version fr
 lake build --wfail
 ```
 
-The build checks every proof. `--wfail` makes a `sorry` (or any other warning) fail it, and `Check/Axioms.lean` fails it when a proof uses an axiom other than the three standard ones of Lean (`propext`, `Classical.choice`, `Quot.sound`). So `sorry` and `native_decide` are out; `bv_decide` is fine, since the kernel checks its proof.
+The build checks every proof. `--wfail` makes a `sorry` (or any other warning) fail it, and `Check/Axioms.lean` fails it when a proof uses an axiom other than the three standard ones of Lean (`propext`, `Classical.choice`, `Quot.sound`). So every proof is checked by the Lean kernel. `sorry`, `native_decide` and `bv_decide` are out: the last two add an axiom that trusts compiled code (for `bv_decide`, its LRAT checker).
+
+```sh
+scripts/check.sh
+```
+
+This runs the checks that the build cannot do alone: every file under `Spec/` is imported by `Spec.lean` (so the axiom check sees it), no file under `Spec/` uses an escape that adds no axiom (`debug.skipKernelTC`, `implemented_by`, `extern`, `unsafe`), and the axiom check itself still fails on a `sorry` and on a `native_decide`. CI runs it.
 
 ## License
 

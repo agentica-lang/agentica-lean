@@ -13,6 +13,8 @@ Spec.lean        the library root; imports every spec
 Spec/            one module per builtin: Spec/<Type>/<Method>.lean
 Check/Axioms.lean  fails the build when a Spec declaration uses an axiom
                  other than propext, Classical.choice and Quot.sound
+scripts/check.sh the checks around the build (imports, escapes, self-test)
+tests/AxiomFixture.lean  bad proofs that the axiom check must reject
 .github/         CI: elan, then `lake build --wfail`
 ```
 
@@ -20,12 +22,21 @@ Check/Axioms.lean  fails the build when a Spec declaration uses an axiom
 
 - `lake build --wfail`: build and check every proof and the axioms; a warning
   fails it.
+- `scripts/check.sh`: the imports of `Spec.lean`, the banned escapes, and a
+  test that the axiom check fails on a bad fixture. Run it after the build.
 
 ## Rules
 
-- No `sorry`, no `admit`, no `native_decide` and no new `axiom`. CI fails on
-  a warning, and `Check/Axioms.lean` fails on any axiom but the standard
-  three. `bv_decide` is fine: the kernel checks its proof.
+- Every proof is checked by the kernel. No `sorry`, `admit`, `native_decide`,
+  `bv_decide` or new `axiom`: `bv_decide` adds an axiom that trusts its
+  compiled LRAT checker. Use `bv_omega`, `omega`, `simp` with `BitVec`
+  lemmas, or `decide +kernel`. CI fails on a warning, and `Check/Axioms.lean`
+  fails on any axiom but `propext`, `Classical.choice` and `Quot.sound`.
+- No escapes that add no axiom: `set_option debug.skipKernelTC`,
+  `@[implemented_by]`, `@[extern]`, `unsafe`. `scripts/check.sh` fails on
+  them under `Spec/`.
+- `Spec.lean` imports every file under `Spec/`; `scripts/check.sh` fails
+  otherwise.
 - No Mathlib unless a proof needs it; then the PR says why.
 - A spec follows the real contract: read the VM code (`vm/`), the catalog row
   (`compiler/catalog/builtins_data.agc`) and the site page
