@@ -65,7 +65,8 @@ theorem be32_lt (data : Bytes) (o : Nat) : be32 data o < 2 ^ 32 := by
 /-- `load32_be` in range never halts and is the 64 bits of `be32`. -/
 theorem load32_be_in_range (data : Bytes) (offset : AInt) (type : String)
     (h0 : 0 ≤ offset.bits.toInt) (h4 : offset.bits.toInt + 4 ≤ data.data.size) :
-    load32_be data offset type = pure (.ok ⟨BitVec.ofNat 64 (be32 data offset.bits.toNat)⟩) := by
+    load32_be data offset type =
+      pure (.ok ⟨BitVec.ofNat 64 (be32 data offset.bits.toNat)⟩) := by
   have h4i : (AInt.ofInt 4).bits.toInt = 4 := AInt.ofInt_toInt (n := 4) (by omega)
   obtain ⟨_, a1, b1⟩ := add_at data offset 1 h0 (by omega)
   obtain ⟨_, a2, b2⟩ := add_at data offset 2 h0 (by omega)
