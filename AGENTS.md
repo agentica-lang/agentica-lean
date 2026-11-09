@@ -13,7 +13,8 @@ lakefile.toml    the Lake project: the `Agentica` and `Check` libraries
 Agentica.lean    the library root; imports every module under Agentica/
 Agentica/        the checked Lean code: Prelude/ (the model of the VM),
                  later the translations and their proofs
-  Prelude/Int.lean  AInt (an Agentica Int: BitVec 64) and RuntimeError
+  Prelude/Int.lean  AInt (an Agentica Int: a structure of 64 bits) and
+                 RuntimeError
   Prelude/Int/<Method>.lean  one builtin of Int, with its theorems
 Check/Axioms.lean  fails the build when an Agentica declaration uses an axiom
                  other than propext, Classical.choice and Quot.sound
@@ -45,8 +46,12 @@ tests/AxiomFixture.lean  bad proofs that the axiom check must reject
 - A builtin in the prelude follows the real contract: read the VM code
   (`vm/`), the catalog row (`compiler/catalog/builtins_data.agc`) and the
   site page (`site/content/library/`) of agentica first.
-- An Agentica `Int` is `AInt` (a `BitVec 64`; `toInt` reads it as signed). A
-  builtin that can fail returns `Except RuntimeError`, one constructor per
+- An Agentica `Int` is `AInt`, a structure around `bits : BitVec 64`
+  (`bits.toInt` reads it as signed). It has no arithmetic or order instances:
+  the operators of `BitVec` wrap and compare unsigned, the VM does not. The
+  prelude and translated code reach an `Int` only through prelude functions,
+  and the translator emits qualified calls (`AInt.shift_right_unsigned a c`).
+- A builtin that can fail returns `Except RuntimeError`, one constructor per
   diagnostic code (`RUNTIME-...`), never its message.
 - A builtin keeps its Agentica name: `Int.shift_right_unsigned` is
   `AInt.shift_right_unsigned`. Its definition follows the C code step by step,
