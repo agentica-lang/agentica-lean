@@ -1,3 +1,5 @@
+import Agentica.Prelude.RuntimeError
+
 /-!
 # The Agentica `Int`
 
@@ -11,8 +13,9 @@ unsigned.
 while the VM's `+`, `-` and `*` fail on overflow and its comparisons are
 signed. Each VM operation comes as a prelude function with its own contract.
 
-A builtin that can fail returns `Except RuntimeError`: the error is the
-diagnostic code of the VM, never its message.
+A builtin that can fail returns `M`, that is `Except RuntimeError`
+(`Agentica/Prelude/RuntimeError.lean`): the error is the diagnostic code of
+the VM, never its message.
 -/
 
 namespace Agentica
@@ -24,17 +27,6 @@ structure AInt where
   bits : BitVec 64
   deriving DecidableEq, Repr
 
-/-- The runtime errors of the builtins modelled so far. One constructor per
-diagnostic code; `code` gives the text the VM prints. -/
-inductive RuntimeError where
-  /-- A count outside its allowed range, for example a negative shift. -/
-  | invalidCount
-  deriving DecidableEq, Repr
-
-/-- The diagnostic code, as the VM reports it. -/
-def RuntimeError.code : RuntimeError → String
-  | .invalidCount => "RUNTIME-INVALID-COUNT"
-
 /-- The Agentica `Int` with value `n`, wrapped to 64 bits: for literals, such
 as `AInt.ofInt (-1)`. -/
 def AInt.ofInt (n : Int) : AInt := ⟨BitVec.ofInt 64 n⟩
@@ -44,5 +36,16 @@ theorem AInt.toInt_eq_toNat_of_nonneg {x : BitVec 64} (h : 0 ≤ x.toInt) :
     x.toInt = x.toNat := by
   rw [BitVec.toInt_eq_toNat_cond] at h ⊢
   split <;> omega
+
+/-- A natural number below `2^63` keeps its value as a signed 64-bit one. -/
+theorem AInt.toInt_ofNat_of_lt {n : Nat} (h : n < 2 ^ 63) :
+    (BitVec.ofNat 64 n).toInt = n := by
+  rw [BitVec.toInt_eq_toNat_cond, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  split <;> omega
+
+/-- A literal from 0 to `2^63 - 1` has its value. -/
+theorem AInt.ofInt_toInt {n : Nat} (h : n < 2 ^ 63) : (AInt.ofInt n).bits.toInt = n := by
+  simp only [AInt.ofInt, BitVec.ofInt_natCast]
+  exact toInt_ofNat_of_lt h
 
 end Agentica

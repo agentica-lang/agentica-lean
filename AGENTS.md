@@ -13,8 +13,9 @@ lakefile.toml    the Lake project: the `Agentica` and `Check` libraries
 Agentica.lean    the library root; imports every module under Agentica/
 Agentica/        the checked Lean code: Prelude/ (the model of the VM),
                  later the translations and their proofs
-  Prelude/Int.lean  AInt (an Agentica Int: a structure of 64 bits) and
-                 RuntimeError
+  Prelude/RuntimeError.lean  RuntimeError (one constructor per VM code)
+                 and M := Except RuntimeError
+  Prelude/Int.lean  AInt (an Agentica Int: a structure of 64 bits)
   Prelude/Int/<Method>.lean  one builtin of Int, with its theorems
   Design/          hand translations: the output the translator must
                  reproduce (docs/translator.md)

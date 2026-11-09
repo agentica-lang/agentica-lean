@@ -1,4 +1,5 @@
-import Agentica.Prelude.Int
+import Agentica.Prelude.Int.Arith
+import Agentica.Prelude.Int.Compare
 
 /-!
 # Design target: `read_u16_le` of `std/binary`, translated by hand
@@ -8,56 +9,23 @@ This file is a **hand translation**. It shows the Lean that the translator of
 `stdlib/binary.agc` (agentica 0.27.0), and one proof about it. The tool must
 reproduce the three definitions; the file goes away when it does.
 
-The prelude pieces below (`RuntimeError`, `Result`, `Bytes` and the `AInt`
-operations) are drafts in this namespace only. Each moves to
-`Agentica/Prelude/` in its own PR, with its VM contract. The draft
-`RuntimeError` stands in for `Agentica.RuntimeError`: its constructors become
-new constructors there, each with its `code`.
+It uses the prelude where the prelude has the piece: `RuntimeError`, `M`,
+`AInt.add`, `AInt.sub` and the comparisons. The other pieces below (`Result`,
+`Bytes`, `AInt.bit_or`, `AInt.shift_left`, `AInt.to_s`) are drafts in this
+namespace only. Each moves to `Agentica/Prelude/` in its own PR, with its VM
+contract, and this file then uses it from there.
 -/
 
 namespace Agentica.Design
 
 /-! ## Draft prelude -/
 
-/-- A runtime error that halts the program: its diagnostic code. -/
-inductive RuntimeError where
-  /-- Signed overflow of `+`, `-`, `*` (`vm/interp.c`, `agc_op_add_i`). -/
-  | integerOverflow
-  /-- `b[i]` outside the bytes (`vm/bytes.c`, `builtin_at`). -/
-  | indexOutOfRange
-  /-- A count outside its allowed range, for example a negative shift. -/
-  | invalidCount
-  deriving DecidableEq, Repr
-
-/-- The diagnostic code, as the VM reports it. -/
-def RuntimeError.code : RuntimeError → String
-  | .integerOverflow => "RUNTIME-INTEGER-OVERFLOW"
-  | .indexOutOfRange => "RUNTIME-INDEX-OUT-OF-RANGE"
-  | .invalidCount => "RUNTIME-INVALID-COUNT"
-
-/-- A translated function and a builtin that can halt run in `M`. -/
-abbrev M := Except RuntimeError
-
 /-- Agentica `Result[T]`: a value, or an error with its message. It is a value
-of the program, unlike `RuntimeError`. -/
+of the program, unlike a `RuntimeError`. -/
 inductive Result (α : Type) where
   | ok (value : α)
   | error (message : String)
   deriving DecidableEq, Repr
-
-/-- `a + b`: fails on signed overflow (`vm/interp.c`, `agc_op_add_i`). -/
-def AInt.add (a b : AInt) : M AInt :=
-  if a.bits.saddOverflow b.bits then .error .integerOverflow else pure ⟨a.bits + b.bits⟩
-
-/-- `a - b`: fails on signed overflow (`vm/interp.c`, `agc_op_sub_i`). -/
-def AInt.sub (a b : AInt) : M AInt :=
-  if a.bits.ssubOverflow b.bits then .error .integerOverflow else pure ⟨a.bits - b.bits⟩
-
-/-- `a < b`, signed. -/
-def AInt.lt (a b : AInt) : Bool := decide (a.bits.toInt < b.bits.toInt)
-
-/-- `a > b`, signed. -/
-def AInt.gt (a b : AInt) : Bool := decide (a.bits.toInt > b.bits.toInt)
 
 /-- `Int.bit_or`. -/
 def AInt.bit_or (a b : AInt) : AInt := ⟨a.bits ||| b.bits⟩
@@ -144,16 +112,8 @@ def read_u16_le (data : Bytes) (offset : AInt) : M (Result AInt) :=
 
 /-! ## Lemmas the prelude would give -/
 
-theorem toInt_ofNat_small {n : Nat} (h : n < 2 ^ 63) : (BitVec.ofNat 64 n).toInt = n := by
-  rw [BitVec.toInt_eq_toNat_cond, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
-  split <;> omega
-
-theorem ofInt_toInt {n : Nat} (h : n < 2 ^ 63) : (AInt.ofInt n).bits.toInt = n := by
-  simp only [AInt.ofInt, BitVec.ofInt_natCast]
-  exact toInt_ofNat_small h
-
 theorem length_toInt (data : Bytes) : (Bytes.length data).bits.toInt = data.data.size :=
-  toInt_ofNat_small data.small
+  AInt.toInt_ofNat_of_lt data.small
 
 theorem at_ok (data : Bytes) (i : AInt) (h0 : 0 ≤ i.bits.toInt)
     (h1 : i.bits.toInt < data.data.size) :
@@ -161,22 +121,6 @@ theorem at_ok (data : Bytes) (i : AInt) (h0 : 0 ≤ i.bits.toInt)
   have := AInt.toInt_eq_toNat_of_nonneg h0
   have hlt : i.bits.toNat < data.data.size := by omega
   simp only [Bytes.at, h0, h1, and_self, ↓reduceDIte, getElem!_pos data.data i.bits.toNat hlt]
-
-theorem add_ok (a b : AInt) (h : -2 ^ 63 ≤ a.bits.toInt + b.bits.toInt)
-    (h' : a.bits.toInt + b.bits.toInt < 2 ^ 63) :
-    ∃ c, AInt.add a b = pure c ∧ c.bits.toInt = a.bits.toInt + b.bits.toInt := by
-  have hno : ¬ a.bits.saddOverflow b.bits = true := by
-    simp only [BitVec.saddOverflow, Bool.or_eq_true, decide_eq_true_eq]; omega
-  exact ⟨_, by simp only [AInt.add, hno, ↓reduceIte, Bool.false_eq_true],
-    BitVec.toInt_add_of_not_saddOverflow hno⟩
-
-theorem sub_ok (a b : AInt) (h : -2 ^ 63 ≤ a.bits.toInt - b.bits.toInt)
-    (h' : a.bits.toInt - b.bits.toInt < 2 ^ 63) :
-    ∃ c, AInt.sub a b = pure c ∧ c.bits.toInt = a.bits.toInt - b.bits.toInt := by
-  have hno : ¬ a.bits.ssubOverflow b.bits = true := by
-    simp only [BitVec.ssubOverflow, Bool.or_eq_true, decide_eq_true_eq]; omega
-  exact ⟨_, by simp only [AInt.sub, hno, ↓reduceIte, Bool.false_eq_true],
-    BitVec.toInt_sub_of_not_ssubOverflow hno⟩
 
 /-- The high byte shifted by 8, ORed with the low byte, is `low + 256 * high`. -/
 theorem or_shift_8 (lo hi : Nat) (hlo : lo < 256) (hhi : hi < 256) :
@@ -198,12 +142,13 @@ theorem read_u16_le_in_range (data : Bytes) (offset : AInt)
         256 * (data.data[offset.bits.toNat + 1]!).toNat)⟩) := by
   have := data.small
   have := AInt.toInt_eq_toNat_of_nonneg h0
-  have h2i : (AInt.ofInt 2).bits.toInt = 2 := ofInt_toInt (n := 2) (by omega)
-  have h1i : (AInt.ofInt 1).bits.toInt = 1 := ofInt_toInt (n := 1) (by omega)
-  have h0i : (AInt.ofInt 0).bits.toInt = 0 := ofInt_toInt (n := 0) (by omega)
+  have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
+  have h1i : (AInt.ofInt 1).bits.toInt = 1 := AInt.ofInt_toInt (n := 1) (by omega)
+  have h0i : (AInt.ofInt 0).bits.toInt = 0 := AInt.ofInt_toInt (n := 0) (by omega)
   have hsz := length_toInt data
-  obtain ⟨lim, hlim, hlimv⟩ := sub_ok (Bytes.length data) (AInt.ofInt 2) (by omega) (by omega)
-  obtain ⟨i, hi, hiv⟩ := add_ok offset (AInt.ofInt 1) (by omega) (by omega)
+  obtain ⟨lim, hlim, hlimv⟩ :=
+    AInt.sub_ok (Bytes.length data) (AInt.ofInt 2) (by omega) (by omega)
+  obtain ⟨i, hi, hiv⟩ := AInt.add_ok offset (AInt.ofInt 1) (by omega) (by omega)
   have hinat : i.bits.toNat = offset.bits.toNat + 1 := by
     have := AInt.toInt_eq_toNat_of_nonneg (x := i.bits) (by omega)
     omega
@@ -229,8 +174,8 @@ theorem read_u16_le_out_of_range (data : Bytes) (offset : AInt)
     read_u16_le data offset = pure (.error ("u16 at offset " ++ AInt.to_s offset ++
       " is outside bytes of length " ++ AInt.to_s (Bytes.length data))) := by
   have := data.small
-  have h0i : (AInt.ofInt 0).bits.toInt = 0 := ofInt_toInt (n := 0) (by omega)
-  have h2i : (AInt.ofInt 2).bits.toInt = 2 := ofInt_toInt (n := 2) (by omega)
+  have h0i : (AInt.ofInt 0).bits.toInt = 0 := AInt.ofInt_toInt (n := 0) (by omega)
+  have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
   have hsz := length_toInt data
   by_cases hneg : offset.bits.toInt < 0
   · have hlt : AInt.lt offset (AInt.ofInt 0) = true := by
@@ -240,7 +185,7 @@ theorem read_u16_le_out_of_range (data : Bytes) (offset : AInt)
   · have hlt : ¬ AInt.lt offset (AInt.ofInt 0) = true := by
       simp only [AInt.lt, decide_eq_true_eq]; omega
     obtain ⟨lim, hlim, hlimv⟩ :=
-      sub_ok (Bytes.length data) (AInt.ofInt 2) (by omega) (by omega)
+      AInt.sub_ok (Bytes.length data) (AInt.ofInt 2) (by omega) (by omega)
     have hgt : AInt.gt offset lim = true := by
       simp only [AInt.gt, decide_eq_true_eq]; omega
     simp only [read_u16_le, load16_le, window, hlt, Bool.false_eq_true, ↓reduceIte, hlim,

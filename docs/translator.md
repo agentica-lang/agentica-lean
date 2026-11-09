@@ -121,14 +121,15 @@ What #1159 must give for step 1:
   recursion is irreducible, so a golden over it needs `decide +kernel` or
   `unseal`, not `rfl`. `partial` is not used: it gives nothing to prove.
 - **Loops (step 3).** A loop becomes a function with fuel, with the top call
-  given `2^64` steps. Running out is its own constructor, `outOfFuel`,
-  outside the VM's diagnostic codes: it has no `code`, and the differential
-  test fails if it ever sees it. The definition stays total. A theorem that
+  given `2^64` steps. Running out is its own constructor, `outOfFuel`, in the
+  fuel wrapper's own type, not in `RuntimeError`, which keeps one constructor
+  per VM code (so `RuntimeError.code` stays total). The differential test
+  fails if it ever sees it. The definition stays total. A theorem that
   a call does not halt says `∃ v, f x = pure v` (or `f x = pure v`), never
   `f x ≠ .error e`, since that also holds when the fuel runs out.
 - **Not modelled.** The stack depth (`RUNTIME-STACK-OVERFLOW`), the step
-  limit (`RUNTIME-STEP-LIMIT`, `--max-steps`) and memory. A theorem may give a value where the VM runs out of
-  them.
+  limit (`RUNTIME-STEP-LIMIT`, `--max-steps`) and memory. A theorem may give
+  a value where the VM runs out of them.
 
 ## Layout and the `--check` mode
 
