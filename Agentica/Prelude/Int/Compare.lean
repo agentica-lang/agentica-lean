@@ -10,22 +10,27 @@ compare the 64 bits. Each comparison gives a `Bool` and never halts.
 
 namespace Agentica
 
-/-- Agentica `a == b` on `Int`. -/
+/-- Agentica `a == b` on `Int` (`vm/interp.c`, `agc_op_eq` through
+`equal_values`). -/
 def AInt.eq (a b : AInt) : Bool := decide (a = b)
 
-/-- Agentica `a != b` on `Int`. -/
+/-- Agentica `a != b` on `Int` (`vm/interp.c`, `agc_op_ne` through
+`equal_values`). -/
 def AInt.ne (a b : AInt) : Bool := !decide (a = b)
 
-/-- Agentica `a < b` on `Int`, signed. -/
+/-- Agentica `a < b` on `Int`, signed (`vm/interp.c`, `agc_op_lt_i`). -/
 def AInt.lt (a b : AInt) : Bool := decide (a.bits.toInt < b.bits.toInt)
 
-/-- Agentica `a <= b` on `Int`, signed. -/
+/-- Agentica `a <= b` on `Int`, signed (`vm/interp.c`, `agc_op_le_i`). -/
 def AInt.le (a b : AInt) : Bool := decide (a.bits.toInt ≤ b.bits.toInt)
 
-/-- Agentica `a > b` on `Int`, signed. -/
+/-- Agentica `a > b` on `Int`, signed. The VM has no instruction for it: the
+lowering writes `lt-i` with the operands swapped
+(`compiler/lower/lower_tables.agc`, `INT_OPS`), so it is `agc_op_lt_i`. -/
 def AInt.gt (a b : AInt) : Bool := decide (a.bits.toInt > b.bits.toInt)
 
-/-- Agentica `a >= b` on `Int`, signed. -/
+/-- Agentica `a >= b` on `Int`, signed: `le-i` with the operands swapped
+(`compiler/lower/lower_tables.agc`, `INT_OPS`), so `agc_op_le_i`. -/
 def AInt.ge (a b : AInt) : Bool := decide (a.bits.toInt ≥ b.bits.toInt)
 
 namespace AInt

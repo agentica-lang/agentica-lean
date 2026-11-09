@@ -16,7 +16,9 @@ Agentica/        the checked Lean code: Prelude/ (the model of the VM),
   Prelude/RuntimeError.lean  RuntimeError (one constructor per VM code)
                  and M := Except RuntimeError
   Prelude/Int.lean  AInt (an Agentica Int: a structure of 64 bits)
-  Prelude/Int/<Method>.lean  one builtin of Int, with its theorems
+  Prelude/Int/<Method>.lean  one builtin of Int, with its theorems;
+                 Arith (+, -) and Compare (==, <, ...) hold the operators,
+                 Bits the bit_* builtins
   Design/          hand translations: the output the translator must
                  reproduce (docs/translator.md)
 docs/translator.md  the design of the translator

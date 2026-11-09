@@ -3,7 +3,10 @@
 import Agentica.Design.ReadU16Le
 import Agentica.Prelude.Int
 import Agentica.Prelude.Int.Arith
+import Agentica.Prelude.Int.Bits
 import Agentica.Prelude.Int.Compare
+import Agentica.Prelude.Int.ShiftLeft
+import Agentica.Prelude.Int.ShiftRight
 import Agentica.Prelude.Int.ShiftRightUnsigned
 import Agentica.Prelude.RuntimeError
 
