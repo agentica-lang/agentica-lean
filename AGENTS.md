@@ -19,6 +19,7 @@ Agentica/        the checked Lean code: Prelude/ (the model of the VM),
   Prelude/Int/<Method>.lean  one builtin of Int, with its theorems;
                  Arith (+, -) and Compare (==, <, ...) hold the operators,
                  Bits the bit_* builtins
+  Prelude/String/<Method>.lean  one builtin of String
   Design/          hand translations: the output the translator must
                  reproduce (docs/translator.md)
 docs/translator.md  the design of the translator

@@ -110,7 +110,9 @@ What #1159 must give for step 1:
 - **`case`, `Result`, `try`.** `case` is `match`, with the same patterns.
   `try e` is `match ← e with | .error m => return .error m | .ok v => ...`.
   `return` is `return`.
-- **Literals.** `AInt.ofInt 2`; an interpolation is `++` with `AInt.to_s`.
+- **Literals.** `AInt.ofInt 2`; an interpolation is `++`, with
+  `String.from_int` for an `Int` part (the VM's `TO_TEXT` writes the same
+  text as `n.to_s`).
 - **Names.** A call takes the name the checker resolved, not the one written:
   `data.size` is `Bytes.length` (an alias, `compiler/check/check_tables.agc`).
 - **Recursion (step 1).** A recursive function becomes a Lean `def`. If Lean
@@ -155,7 +157,8 @@ Each with its VM contract, in its own PR:
 - `AInt.shift_left`, `AInt.shift_right` (`vm/numbers.c`): a negative count
   is `RUNTIME-INVALID-COUNT`, and a count of 64 or more gives 0 (or -1 for
   `shift_right` of a negative value). `AInt.bit_or`, `AInt.bit_and`.
-- `AInt.to_s`: the decimal digits, for interpolation (`vm/text.c`).
+- `String.from_int` (`n.to_s`): the decimal digits, for interpolation
+  (`vm/builtins.c`, `builtin_from_int`).
 - `Bytes`, `Bytes.length` (`vm/bytes.c`, `builtin_length`), and `Bytes.at`
   (`b[i]`, `builtin_at`): a byte from 0 to 255, or
   `RUNTIME-INDEX-OUT-OF-RANGE`.

@@ -19,7 +19,7 @@ namespace Agentica
 /-- Agentica `Int.shift_right_unsigned(a, count)`. It follows
 `builtin_int_shift_right_unsigned` and `shift_count` of `vm/numbers.c` step by
 step: the count check, then the test for 64 or more, then the shift. -/
-def AInt.shift_right_unsigned (a count : AInt) : Except RuntimeError AInt :=
+def AInt.shift_right_unsigned (a count : AInt) : M AInt :=
   if count.bits.toInt < 0 then .error .invalidCount
   else if count.bits.toNat ≥ 64 then .ok ⟨0⟩
   else .ok ⟨a.bits >>> count.bits.toNat⟩

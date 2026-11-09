@@ -2,6 +2,7 @@ import Agentica.Prelude.Int.Arith
 import Agentica.Prelude.Int.Bits
 import Agentica.Prelude.Int.Compare
 import Agentica.Prelude.Int.ShiftLeft
+import Agentica.Prelude.String.FromInt
 
 /-!
 # Design target: `read_u16_le` of `std/binary`, translated by hand
@@ -12,10 +13,10 @@ This file is a **hand translation**. It shows the Lean that the translator of
 reproduce the three definitions; the file goes away when it does.
 
 It uses the prelude where the prelude has the piece: `RuntimeError`, `M`,
-`AInt.add`, `AInt.sub`, the comparisons, `AInt.bit_or` and
-`AInt.shift_left`. The other pieces below (`Result`, `Bytes`, `AInt.to_s`)
-are drafts in this namespace only. Each moves to `Agentica/Prelude/` in its own PR, with its VM
-contract, and this file then uses it from there.
+`AInt.add`, `AInt.sub`, the comparisons, `AInt.bit_or`, `AInt.shift_left`
+and `String.from_int`. The other pieces below (`Result`, `Bytes`) are drafts
+in this namespace only. Each moves to `Agentica/Prelude/` in its own PR, with
+its VM contract, and this file then uses it from there.
 -/
 
 namespace Agentica.Design
@@ -28,10 +29,6 @@ inductive Result (α : Type) where
   | ok (value : α)
   | error (message : String)
   deriving DecidableEq, Repr
-
-/-- An `Int` in a string interpolation: its decimal digits (`vm/text.c`,
-`snprintf` with `PRId64`). -/
-def AInt.to_s (a : AInt) : String := toString a.bits.toInt
 
 /-- Agentica `Bytes`. Its size is an `Int`, so it is below `2^63`. -/
 structure Bytes where
@@ -85,8 +82,8 @@ def window (data : Bytes) (offset n : AInt) (type : String) : M (Result Unit) :=
     let limit ← AInt.sub (Bytes.length data) n
     pure (AInt.gt offset limit)
   if out then
-    return .error (type ++ " at offset " ++ AInt.to_s offset ++
-      " is outside bytes of length " ++ AInt.to_s (Bytes.length data))
+    return .error (type ++ " at offset " ++ String.from_int offset ++
+      " is outside bytes of length " ++ String.from_int (Bytes.length data))
   return .ok ()
 
 def load16_le (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
@@ -163,8 +160,8 @@ theorem read_u16_le_in_range (data : Bytes) (offset : AInt)
 a negative offset, or one where two bytes do not fit (up to `Int.MAX`). -/
 theorem read_u16_le_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 2) :
-    read_u16_le data offset = pure (.error ("u16 at offset " ++ AInt.to_s offset ++
-      " is outside bytes of length " ++ AInt.to_s (Bytes.length data))) := by
+    read_u16_le data offset = pure (.error ("u16 at offset " ++ String.from_int offset ++
+      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
   have := data.small
   have h0i : (AInt.ofInt 0).bits.toInt = 0 := AInt.ofInt_toInt (n := 0) (by omega)
   have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
