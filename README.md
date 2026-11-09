@@ -7,7 +7,7 @@ Translate pure [Agentica](https://github.com/agentica-lang/agentica) functions t
 The plan is in issue #3. It has three parts:
 
 - **A translator** from `.agc` to Lean, for pure functions: no I/O, tasks, channels or FFI. It reads the checked program and writes one Lean definition per function. A function outside the subset it knows is refused with a clear message.
-- **A Lean prelude** that models the Agentica types and builtins the translated code calls. An `Int` is 64 bits, as in the VM, and a runtime error is its diagnostic code (`RUNTIME-...`), never its message. Each builtin in the prelude comes with theorems about it.
+- **A Lean prelude** that models the Agentica types and builtins the translated code calls. An `Int` is 64 bits, as in the VM, and a runtime error is its diagnostic code (`RUNTIME-...`), never its message. Each builtin in the prelude comes with theorems about it; the first one is `Int.shift_right_unsigned` (`Agentica/Prelude/Int/ShiftRightUnsigned.lean`).
 - **Proofs** about the translated functions, beside them, checked by the Lean kernel. The first target is the little-endian readers of `std/binary`: the shifts and ORs equal `b0 + 256*b1 + ...`.
 
 ## What is trusted
@@ -34,7 +34,7 @@ The build checks every proof. `--wfail` makes a `sorry` (or any other warning) f
 scripts/check.sh
 ```
 
-The axiom check also fails on escapes that add no axiom: an `unsafe` constant, and `@[implemented_by]` or `@[extern]`. `scripts/check.sh` runs the checks that the build cannot do alone: every file under `Spec/` is imported by `Spec.lean` (so the axiom check sees it), no file turns off the kernel with `debug.skipKernelTC`, and the axiom check itself still fails on a `sorry`, a `native_decide`, a `bv_decide` and each escape (`tests/AxiomFixture.lean`). CI runs it.
+The axiom check also fails on escapes that add no axiom: an `unsafe` constant, and `@[implemented_by]` or `@[extern]`. `scripts/check.sh` runs the checks that the build cannot do alone: every file under `Agentica/` is imported by `Agentica.lean` (so the axiom check sees it), no file turns off the kernel with `debug.skipKernelTC`, and the axiom check itself still fails on a `sorry`, a `native_decide`, a `bv_decide` and each escape (`tests/AxiomFixture.lean`). CI runs it.
 
 ## License
 

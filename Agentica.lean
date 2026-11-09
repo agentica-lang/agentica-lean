@@ -1,0 +1,12 @@
+-- The imports of every module under Agentica/ go here, at the top of the file:
+-- an import below the module doc would not parse.
+import Agentica.Prelude.Int
+import Agentica.Prelude.Int.ShiftRightUnsigned
+
+/-!
+# Agentica in Lean
+
+The root of the `Agentica` library, which imports every module under
+`Agentica/`: the prelude (`Agentica/Prelude/`, the model of the VM's types and
+builtins), and later the translated code and its proofs.
+-/
