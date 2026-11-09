@@ -9,6 +9,7 @@ import Agentica.Prelude.Int.ShiftLeft
 import Agentica.Prelude.Int.ShiftRight
 import Agentica.Prelude.Int.ShiftRightUnsigned
 import Agentica.Prelude.RuntimeError
+import Agentica.Prelude.String.FromInt
 
 /-!
 # Agentica in Lean
