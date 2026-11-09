@@ -71,7 +71,8 @@ def halt_frame(stack: list[dict]) -> str | None:
     """The first function of the harness on the stack, from the top."""
     for frame in stack:
         name = frame.get("function", "")
-        if name.startswith("call_") and frame.get("file", "").endswith(PROGRAM):
+        file = frame.get("file", "")
+        if name.startswith("call_") and (file == PROGRAM or file.endswith("/" + PROGRAM)):
             return name
         if name.startswith("call_") or name in HARNESS:
             return f"{name} ({frame.get('file', '')})"
@@ -161,24 +162,28 @@ def self_test(agentica: str, text: str) -> int:
         out[0] = "\t".join([id_, fn, args, expected + "1"]) + "\n"
         return "".join(out)
 
-    def planted_harness_halt() -> None:
-        # A halt in a harness function (`run_case`), not in a `call_`
-        # function of diff/run.agc: it must be refused.
+    def planted_halt(function: str, expected: str) -> tuple[bool, str]:
+        # A halt in `function` of a program other than diff/run.agc: the run
+        # must be refused, naming that frame.
         with tempfile.TemporaryDirectory() as tmp:
             program = os.path.join(tmp, "halts.agc")
             with open(program, "w", encoding="utf-8") as f:
-                f.write("def run_case(n: Int) -> Int\n  return [1][n]\nend\n\n"
-                        "def main() -> Void\n  puts(run_case(System.args().size))\nend\n")
-            run_vm(agentica, os.path.join(tmp, "none.tsv"), 1, program)
+                f.write(f"def {function}(n: Int) -> Int\n  return [1][n]\nend\n\n"
+                        f"def main() -> Void\n  puts({function}(System.args().size))\nend\n")
+            try:
+                run_vm(agentica, os.path.join(tmp, "none.tsv"), 1, program)
+            except HarnessError as err:
+                return expected in str(err), f"harness error: {str(err).splitlines()[0]}"
+            return False, "no error"
 
-    try:
-        planted_harness_halt()
-        print("self-test: a halt in the harness: NOT CAUGHT")
-        halt_bad = 1
-    except HarnessError as err:
-        print(f"self-test: a halt in the harness: fails as it should "
-              f"(harness error: {str(err).splitlines()[0]})")
-        halt_bad = 0
+    halt_bad = 0
+    for name, function, expected in [
+        ("a halt in the harness", "run_case", "halted in run_case"),
+        ("a call_ frame in another file", "call_at", "halted in call_at ("),
+    ]:
+        ok, got = planted_halt(function, expected)
+        print(f"self-test: {name}: {'fails as it should' if ok else 'NOT CAUGHT'} ({got})")
+        halt_bad += 0 if ok else 1
 
     planted = [
         ("an empty case file", "", "no cases"),

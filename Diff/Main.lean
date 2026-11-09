@@ -160,6 +160,10 @@ def fixedCases : List Case := Id.run do
   for i in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] do
     out := out ++ bytesCases long i
   out := out ++ bytesCases [] 0
+  -- The sign edges of each reader, at offset 0.
+  for b in [[0, 0, 0, 0, 0, 0, 0, 127], [0, 0, 0, 0, 0, 0, 0, 128], [255, 127], [0, 128],
+      [255, 255, 255, 127], [0, 0, 0, 128], List.replicate 8 255] do
+    out := out ++ bytesCases b 0
   return out
 
 /-- Random cases from a fixed seed: `perFunction` for each function. -/

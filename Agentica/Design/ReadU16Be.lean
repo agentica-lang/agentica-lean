@@ -45,7 +45,7 @@ theorem read_u16_be_in_range (data : Bytes) (offset : AInt)
   have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
   obtain ⟨_, a1, b1⟩ := add_at data offset 1 h0 (by omega)
   have ha := at_byte data offset h0 (by omega)
-  have hs := shift_left_lit 8 (by omega)
+  have hs := AInt.shift_left_lit 8 (by omega)
   simp only [Int.cast_ofNat_Int] at a1 hs
   rw [read_u16_be, load16_be, window_ok data offset _ "u16" (by omega) (by omega) h0
     (by omega)]

@@ -135,19 +135,6 @@ theorem add_at (data : Bytes) (offset : AInt) (k : Nat) (h0 : 0 ≤ offset.bits.
   rw [Bytes.at_ok data i (by omega) (by omega), hinat]
   rfl
 
-/-- The shift by a literal count of the readers never halts. -/
-theorem shift_left_lit (k : Nat) (hk : k < 64) :
-    ∀ x : AInt, AInt.shift_left x (AInt.ofInt k) = pure ⟨x.bits <<< k⟩ := by
-  intro x
-  have hki : (AInt.ofInt k).bits.toInt = k := AInt.ofInt_toInt (by omega)
-  have hkn : (AInt.ofInt k).bits.toNat = k := by
-    have := AInt.toInt_eq_toNat_of_nonneg (x := (AInt.ofInt k).bits) (by omega)
-    omega
-  have h1 : ¬ (AInt.ofInt k).bits.toInt < 0 := by omega
-  have h2 : ¬ k ≥ 64 := by omega
-  simp only [AInt.shift_left, h1, hkn, h2, ↓reduceIte]
-  rfl
-
 /-! ## The theorems -/
 
 /-- In range, `load16_le` never halts and is `b0 + 256 * b1`. -/
@@ -158,7 +145,7 @@ theorem load16_le_in_range (data : Bytes) (offset : AInt) (type : String)
   have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
   obtain ⟨_, a1, b1⟩ := add_at data offset 1 h0 (by omega)
   have ha := at_byte data offset h0 (by omega)
-  have hs := shift_left_lit 8 (by omega)
+  have hs := AInt.shift_left_lit 8 (by omega)
   simp only [Int.cast_ofNat_Int] at a1 hs
   rw [load16_le, window_ok data offset _ type (by omega) (by omega) h0 (by omega)]
   simp only [pure_bind, ha, a1, b1, hs, AInt.bit_or]
@@ -171,6 +158,17 @@ theorem read_u16_le_in_range (data : Bytes) (offset : AInt)
       ((data.data[offset.bits.toNat]!).toNat +
         256 * (data.data[offset.bits.toNat + 1]!).toNat)⟩) :=
   load16_le_in_range data offset "u16" h0 h2
+
+/-- In range, `read_u16_le` is `ok` of `b0 + 256 * b1` as an `Int`. -/
+theorem read_u16_le_toInt (data : Bytes) (offset : AInt)
+    (h0 : 0 ≤ offset.bits.toInt) (h2 : offset.bits.toInt + 2 ≤ data.data.size) :
+    ∃ c, read_u16_le data offset = pure (.ok c) ∧
+      c.bits.toInt = data.byte offset.bits.toNat + 256 * data.byte (offset.bits.toNat + 1) := by
+  have := Bytes.byte_lt data offset.bits.toNat
+  have := Bytes.byte_lt data (offset.bits.toNat + 1)
+  refine ⟨_, load16_le_in_range data offset "u16" h0 h2, ?_⟩
+  rw [AInt.toInt_ofNat_of_lt (by omega)]
+  omega
 
 /-- Out of range, `read_u16_le` never halts and gives the documented error:
 a negative offset, or one where two bytes do not fit (up to `Int.MAX`). -/
