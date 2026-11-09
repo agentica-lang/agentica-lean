@@ -1,0 +1,11 @@
+name = "agentica-lean"
+version = "0.1.0"
+defaultTargets = ["Spec", "Check"]
+
+[[lean_lib]]
+name = "Spec"
+
+# Checks the axioms of every Spec declaration (Check/Axioms.lean).
+[[lean_lib]]
+name = "Check"
+roots = ["Check.Axioms"]
