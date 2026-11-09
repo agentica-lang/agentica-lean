@@ -16,7 +16,9 @@ reproduce the three definitions; the file goes away when it does.
 
 Everything it calls comes from the prelude, by its full name
 (`Agentica.Bytes.at`), as the translator will write it (see
-`Agentica/Prelude/Bytes.lean`).
+`Agentica/Prelude/Bytes.lean`). The rule is for the translated definitions
+only: theorem statements and proofs are written by hand and use short names
+(`Bytes.length`), which the namespace resolves to the prelude.
 -/
 
 namespace Agentica.Design

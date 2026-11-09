@@ -1,6 +1,6 @@
 name = "agentica-lean"
 version = "0.1.0"
-defaultTargets = ["Agentica", "Check"]
+defaultTargets = ["Agentica", "Check", "diffcases"]
 
 # `Agentica.*` is the root and every module under Agentica/: each is built,
 # even one that Agentica.lean does not import. (`Agentica.+` would leave out
@@ -13,3 +13,9 @@ globs = ["Agentica.*"]
 [[lean_lib]]
 name = "Check"
 roots = ["Check.Axioms"]
+
+# Prints the cases of the differential test with the Lean results
+# (Diff/Main.lean); scripts/difftest.py runs them on agentica.
+[[lean_exe]]
+name = "diffcases"
+root = "Diff.Main"

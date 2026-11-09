@@ -28,7 +28,12 @@ Check/Axioms.lean  fails the build when an Agentica declaration uses an axiom
                  other than propext, Classical.choice and Quot.sound
 scripts/check.sh the checks around the build (imports, escapes, self-test)
 tests/AxiomFixture.lean  bad proofs that the axiom check must reject
-.github/         CI: elan, `lake build --wfail`, then `scripts/check.sh`
+Diff/Main.lean   `lake exe diffcases`: the cases of the differential test,
+                 with the Lean results
+diff/run.agc     runs the same cases on agentica
+scripts/difftest.py  runs both and compares
+.github/         CI: elan, `lake build --wfail`, `scripts/check.sh`, then the
+                 differential test on the pinned agentica
 ```
 
 ## Commands
@@ -37,6 +42,11 @@ tests/AxiomFixture.lean  bad proofs that the axiom check must reject
   fails it.
 - `scripts/check.sh`: the imports of `Agentica.lean`, the banned escapes, and
   a test that the axiom check fails on a bad fixture. Run it after the build.
+- `scripts/difftest.py`: the differential test. It uses `$AGENTICA` or
+  `agentica` on PATH, and skips without one (CI sets `REQUIRE_AGENTICA=1`).
+  `--self-test` checks that planted broken inputs fail. A new prelude
+  function needs its name in `FUNCTIONS` there, a `call_` function in
+  `diff/run.agc`, and cases in `Diff/Main.lean`.
 
 ## Rules
 
@@ -60,13 +70,16 @@ tests/AxiomFixture.lean  bad proofs that the axiom check must reject
   prelude and translated code reach an `Int` only through prelude functions,
   and the translator writes each prelude call by its full name
   (`Agentica.AInt.shift_right_unsigned a c`), types by their short names
-  (`Agentica/Prelude/Bytes.lean` says why).
+  (`Agentica/Prelude/Bytes.lean` says why). Hand-written theorems and proofs
+  may use short names.
 - A builtin that can fail returns `M` (`Except RuntimeError`), one
   constructor per diagnostic code (`RUNTIME-...`), never its message.
 - A builtin keeps its Agentica name: `Int.shift_right_unsigned` is
   `AInt.shift_right_unsigned`. Its definition follows the C code step by step,
   and its doc comment names the C function.
-- Differential tests compare values and diagnostic codes, never message text.
+- Differential tests compare values and diagnostic codes, never message text
+  (except a `Result` error message, which is a value). Every prelude function
+  has cases in `Diff/Main.lean`, its edges and random ones.
 - Translated files are generated: change the translator or the `.agc` source,
   never the output by hand.
 - Pin every tool and action: Lean in `lean-toolchain`, elan and actions by
