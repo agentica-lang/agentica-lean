@@ -4,7 +4,7 @@ Translate pure [Agentica](https://github.com/agentica-lang/agentica) functions t
 
 ## What this repo does
 
-The plan is in issue #3. It has three parts:
+The plan is in issue #3, and the design in [docs/translator.md](docs/translator.md). It has three parts:
 
 - **A translator** from `.agc` to Lean, for pure functions: no I/O, tasks, channels or FFI. It reads the checked program and writes one Lean definition per function. A function outside the subset it knows is refused with a clear message.
 - **A Lean prelude** that models the Agentica types and builtins the translated code calls. An `Int` is 64 bits, as in the VM, and a runtime error is its diagnostic code (`RUNTIME-...`), never its message. Each builtin in the prelude comes with theorems about it; the first one is `Int.shift_right_unsigned` (`Agentica/Prelude/Int/ShiftRightUnsigned.lean`).
