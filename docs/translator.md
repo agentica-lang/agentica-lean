@@ -19,7 +19,9 @@ Checked against agentica 0.27.0 and `main` (`stdlib/analysis.agc`,
 - Inside the compiler, the checker keeps no typed tree either. `Checked`
   (`compiler/check/checker.agc`) is a set of side tables over the untyped
   AST: the type of each node by id, what each method call or field resolved
-  to, and the prelude function each call of a prelude builtin runs.
+  to, and the prelude function each call of a prelude builtin runs. So the
+  "checker's own typed tree" that #1159 wants to share does not exist yet:
+  #1159 builds it from the AST and these tables.
 - agentica#1159 (milestone 0.29.0; the owner's comment puts it after 0.30.0)
   asks for `Analysis.bodies(session, path)` and its JSON form: the functions
   of a file with resolved types, the body as a typed tree with resolved call
@@ -34,7 +36,8 @@ use:
 
 - `Int`: literals, `+` and `-` (they halt on overflow), `<` and `>`, `or`,
   and `shift_left`, `shift_right`, `bit_or`;
-- `Bytes`: `data.size` and `data[i]` (it halts outside the bytes);
+- `Bytes`: `data.size` (an alias of `Bytes.length`) and `data[i]` (it halts
+  outside the bytes);
 - `Result`: `ok`, `error` with a message, and `try` as a statement and as an
   expression;
 - a string interpolation of `String` and `Int`;
@@ -50,31 +53,35 @@ The float readers need `Float.from_bits` and the writers need list literals
    checker's own answer: the resolved types, call targets and purity come
    from the same code the VM runs. The same shape serves `verify`. It is
    blocked until a release has #1159.
-2. **A tool that reads a JSON dump** of the checked program (the `_json` form
-   of #1159 behind a CLI command), written in Lean as a `lake exe`. agentica
-   does the same work as for option 1, plus a CLI command and a stable JSON
-   schema. Decoding a large tree in Lean is verbose. No gain over option 1.
+2. **A tool that reads a JSON dump** of the checked program, written in Lean
+   as a `lake exe`. #1159 already gives a versioned JSON form, so this adds
+   only a CLI command in agentica.
 3. **Its own front end** (parser and type rules of the subset). It is not
    blocked. But it is a second copy of the checker: method resolution,
    literal types, `try`, default arguments and the prelude builtins. A
    difference from the checker is a wrong translation that a proof cannot
    catch, and the differential tests catch only the inputs they try.
 
-**Recommendation: option 1.** Until #1159 ships, this repo grows the prelude
+**Recommendation: option 1.** One language for `verify` and this tool, so
+they share the reading of the tree, and no tree decoder to write in Lean.
+Until #1159 ships, this repo grows the prelude
 (below), writes more hand translations as goldens, and builds the
 differential harness, so the translator is the last piece.
 
 What #1159 must give for step 1:
 
 - every function of a file, private ones too (the readers call private
-  helpers), with its linked name;
+  helpers), with its linked name, and its generic parameters and the type
+  arguments of each generic call;
 - the typed tree of the step 1 subset: literals, locals and rebinding, calls
   with the resolved target (user function, or builtin such as `Int.shift_left`
   and `Bytes.at` for `data[i]`), operators with their operand type, `and`,
   `or`, `not`, `if`/`elsif`/`else`, `case` with patterns, `return`, `try`,
   `ok`/`error`, `Optional`, and the parts of a string interpolation with
   their types;
-- purity, through every call, with the reason when a function is impure;
+- purity, through every call, with the reason when a function is impure. A
+  builtin that can halt (`+`, `b[i]`, `unwrap!`) still counts as pure: the
+  halt is a value of the model;
 - the body of a prelude builtin that is written in Agentica (`Checked.bodies`),
   or its name, so the prelude can model it;
 - a span on every node, and a version field in the JSON;
@@ -104,16 +111,23 @@ What #1159 must give for step 1:
   `try e` is `match ← e with | .error m => return .error m | .ok v => ...`.
   `return` is `return`.
 - **Literals.** `AInt.ofInt 2`; an interpolation is `++` with `AInt.to_s`.
+- **Names.** A call takes the name the checker resolved, not the one written:
+  `data.size` is `Bytes.length` (an alias, `compiler/check/check_tables.agc`).
 - **Recursion (step 1).** A recursive function becomes a Lean `def`. If Lean
   cannot prove that it ends, the build fails, and the function stays out of
-  the translation until a later step adds termination hints. `partial` is not
-  used: it gives nothing to prove.
+  the translation until a later step adds termination hints. In practice
+  step 1 accepts almost no recursion over `Int`: Lean finds no structural
+  measure on `AInt` and needs `termination_by`. A `def` by well-founded
+  recursion is irreducible, so a golden over it needs `decide +kernel` or
+  `unseal`, not `rfl`. `partial` is not used: it gives nothing to prove.
 - **Loops (step 3).** A loop becomes a function with fuel, with the top call
-  given `2^64` steps and running out as an error. The definition stays total,
-  and a theorem that the result is a value proves that the loop ends in
-  time.
+  given `2^64` steps. Running out is its own constructor, `outOfFuel`,
+  outside the VM's diagnostic codes: it has no `code`, and the differential
+  test fails if it ever sees it. The definition stays total. A theorem that
+  a call does not halt says `∃ v, f x = pure v` (or `f x = pure v`), never
+  `f x ≠ .error e`, since that also holds when the fuel runs out.
 - **Not modelled.** The stack depth (`RUNTIME-STACK-OVERFLOW`), the step
-  limit and memory. A theorem may give a value where the VM runs out of
+  limit (`RUNTIME-STEP-LIMIT`, `--max-steps`) and memory. A theorem may give a value where the VM runs out of
   them.
 
 ## Layout and the `--check` mode
@@ -140,7 +154,8 @@ Each with its VM contract, in its own PR:
 - `AInt.shift_left`, `AInt.shift_right` (`vm/numbers.c`): a negative count
   is `RUNTIME-INVALID-COUNT`, and a count of 64 or more gives 0 (or -1 for
   `shift_right` of a negative value). `AInt.bit_or`, `AInt.bit_and`.
-- `AInt.to_s`: the decimal digits, for interpolation.
-- `Bytes`, `Bytes.size`, and `Bytes.at` (`b[i]`): a byte from 0 to 255, or
+- `AInt.to_s`: the decimal digits, for interpolation (`vm/text.c`).
+- `Bytes`, `Bytes.length` (`vm/bytes.c`, `builtin_length`), and `Bytes.at`
+  (`b[i]`, `builtin_at`): a byte from 0 to 255, or
   `RUNTIME-INDEX-OUT-OF-RANGE`.
 - `Result`, and `RuntimeError` with the codes above.
