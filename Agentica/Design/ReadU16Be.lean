@@ -52,6 +52,17 @@ theorem read_u16_be_in_range (data : Bytes) (offset : AInt)
   simp only [pure_bind, ha, a1, b1, hs, AInt.bit_or]
   rw [AInt.or_shift_8 _ _ (Bytes.byte_lt _ _) (Bytes.byte_lt _ _)]
 
+/-- In range, `read_u16_be` is `ok` of `256 * b0 + b1` as an `Int`. -/
+theorem read_u16_be_toInt (data : Bytes) (offset : AInt)
+    (h0 : 0 ≤ offset.bits.toInt) (h2 : offset.bits.toInt + 2 ≤ data.data.size) :
+    ∃ c, read_u16_be data offset = pure (.ok c) ∧
+      c.bits.toInt = data.byte (offset.bits.toNat + 1) + 256 * data.byte offset.bits.toNat := by
+  have := Bytes.byte_lt data offset.bits.toNat
+  have := Bytes.byte_lt data (offset.bits.toNat + 1)
+  refine ⟨_, read_u16_be_in_range data offset h0 h2, ?_⟩
+  rw [AInt.toInt_ofNat_of_lt (by omega)]
+  omega
+
 /-- Out of range, `read_u16_be` never halts and gives the documented error. -/
 theorem read_u16_be_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 2) :

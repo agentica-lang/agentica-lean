@@ -51,7 +51,6 @@ theorem shift_left_of_neg (a count : AInt) (h : count.bits.toInt < 0) :
     AInt.shift_left a count = .error .invalidCount := by
   simp only [shift_left, h, ↓reduceIte]
 
-
 /-- A shift by a literal count from 0 to 63 never halts. -/
 theorem shift_left_lit (k : Nat) (hk : k < 64) :
     ∀ x : AInt, AInt.shift_left x (AInt.ofInt k) = pure ⟨x.bits <<< k⟩ := by
