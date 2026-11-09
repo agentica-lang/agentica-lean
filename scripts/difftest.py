@@ -26,7 +26,8 @@ FUNCTIONS = {
     "add", "sub", "bit_and", "bit_or", "bit_xor", "bit_not", "from_int", "shift_left",
     "shift_right", "shift_right_unsigned", "eq", "ne", "lt", "le", "gt", "ge", "length", "at",
     "read_u16_le", "read_u16_be", "read_u32_le", "read_u64_le", "read_i64_le", "read_i16_le",
-    "read_i32_le",
+    "read_i32_le", "read_u8", "read_i8", "read_u32_be", "read_u64_be", "read_i16_be",
+    "read_i32_be", "read_i64_be",
 }
 MIN_CASES = 40
 

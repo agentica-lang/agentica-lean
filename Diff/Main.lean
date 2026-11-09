@@ -123,7 +123,11 @@ def unaryCases (a : Int) : List Case :=
 def readers : List (String × (Bytes → AInt → M (Result AInt))) :=
   [("read_u16_be", Design.read_u16_be), ("read_u32_le", Design.read_u32_le),
    ("read_u64_le", Design.read_u64_le), ("read_i64_le", Design.read_i64_le),
-   ("read_i16_le", Design.read_i16_le), ("read_i32_le", Design.read_i32_le)]
+   ("read_i16_le", Design.read_i16_le), ("read_i32_le", Design.read_i32_le),
+   ("read_u8", Design.read_u8), ("read_i8", Design.read_i8),
+   ("read_u32_be", Design.read_u32_be), ("read_u64_be", Design.read_u64_be),
+   ("read_i16_be", Design.read_i16_be), ("read_i32_be", Design.read_i32_be),
+   ("read_i64_be", Design.read_i64_be)]
 
 def bytesCases (b : List UInt8) (i : Int) : List Case :=
   let bytes := toBytes b
@@ -162,7 +166,9 @@ def fixedCases : List Case := Id.run do
   out := out ++ bytesCases [] 0
   -- The sign edges of each reader, at offset 0.
   for b in [[0, 0, 0, 0, 0, 0, 0, 127], [0, 0, 0, 0, 0, 0, 0, 128], [255, 127], [0, 128],
-      [255, 255, 255, 127], [0, 0, 0, 128], List.replicate 8 255] do
+      [255, 255, 255, 127], [0, 0, 0, 128], List.replicate 8 255, [127], [128],
+      [127, 255], [128, 0], [127, 255, 255, 255], [128, 0, 0, 0], [127, 0, 0, 0, 0, 0, 0, 0],
+      [128, 0, 0, 0, 0, 0, 0, 0]] do
     out := out ++ bytesCases b 0
   return out
 

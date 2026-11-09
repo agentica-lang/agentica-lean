@@ -1,9 +1,13 @@
 -- The imports of every module under Agentica/ go here, at the top of the file:
 -- an import below the module doc would not parse.
+import Agentica.Design.Read8
 import Agentica.Design.ReadSigned
+import Agentica.Design.ReadSignedBe
 import Agentica.Design.ReadU16Be
 import Agentica.Design.ReadU16Le
+import Agentica.Design.ReadU32Be
 import Agentica.Design.ReadU32Le
+import Agentica.Design.ReadU64Be
 import Agentica.Design.ReadU64Le
 import Agentica.Prelude.Bytes
 import Agentica.Prelude.Int
