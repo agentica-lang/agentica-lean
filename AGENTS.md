@@ -20,6 +20,7 @@ Agentica/        the checked Lean code: Prelude/ (the model of the VM),
                  Arith (+, -) and Compare (==, <, ...) hold the operators,
                  Bits the bit_* builtins
   Prelude/String/<Method>.lean  one builtin of String
+  Prelude/Bytes.lean, Prelude/Result.lean  the Bytes and Result types
   Design/          hand translations: the output the translator must
                  reproduce (docs/translator.md)
 docs/translator.md  the design of the translator
@@ -57,9 +58,11 @@ tests/AxiomFixture.lean  bad proofs that the axiom check must reject
   (`bits.toInt` reads it as signed). It has no arithmetic or order instances:
   the operators of `BitVec` wrap and compare unsigned, the VM does not. The
   prelude and translated code reach an `Int` only through prelude functions,
-  and the translator emits qualified calls (`AInt.shift_right_unsigned a c`).
-- A builtin that can fail returns `Except RuntimeError`, one constructor per
-  diagnostic code (`RUNTIME-...`), never its message.
+  and the translator writes each prelude call by its full name
+  (`Agentica.AInt.shift_right_unsigned a c`), types by their short names
+  (`Agentica/Prelude/Bytes.lean` says why).
+- A builtin that can fail returns `M` (`Except RuntimeError`), one
+  constructor per diagnostic code (`RUNTIME-...`), never its message.
 - A builtin keeps its Agentica name: `Int.shift_right_unsigned` is
   `AInt.shift_right_unsigned`. Its definition follows the C code step by step,
   and its doc comment names the C function.

@@ -46,6 +46,18 @@ theorem toInt_bit_not (a : AInt) : (AInt.bit_not a).bits.toInt = -a.bits.toInt -
   have := a.bits.isLt
   split <;> split <;> omega
 
+/-- A high byte shifted left by 8, ORed with a low byte, is
+`low + 256 * high`: how the little-endian readers of `std/binary` build a
+16-bit value. -/
+theorem or_shift_8 (lo hi : Nat) (hlo : lo < 256) (hhi : hi < 256) :
+    (BitVec.ofNat 64 hi <<< 8 ||| BitVec.ofNat 64 lo) = BitVec.ofNat 64 (lo + 256 * hi) := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_or, BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+    BitVec.toNat_ofNat, Nat.shiftLeft_eq, Nat.mod_eq_of_lt (a := hi) (by omega),
+    Nat.mod_eq_of_lt (a := lo) (by omega), Nat.mod_eq_of_lt (a := hi * 2 ^ 8) (by omega),
+    Nat.mod_eq_of_lt (by omega), Nat.mul_comm hi, ← Nat.two_pow_add_eq_or_of_lt (by omega)]
+  omega
+
 /-! Examples, checked by the kernel (`rfl`). The values were compared with
 agentica 0.24.1 by hand. -/
 
