@@ -1,9 +1,9 @@
 import Std.Tactic.BVDecide
 
 /-!
-Bad declarations for `scripts/check.sh`. It copies this file into `Spec/`,
-imports it from `Spec.lean`, and expects `Check/Axioms.lean` to reject each
-one.
+Bad declarations for `scripts/check.sh`. It copies this file into
+`Agentica/`, imports it from `Agentica.lean`, and expects `Check/Axioms.lean`
+to reject each one.
 -/
 
 theorem axiomFixtureSorry : 1 = 2 := sorry

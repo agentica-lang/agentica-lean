@@ -1,12 +1,13 @@
 import Lean
-import Spec
+import Agentica
 
 /-!
 # Axiom check
 
-Building this module fails when a declaration of the `Spec` library depends on
-an axiom outside `allowedAxioms`. It catches a `sorry` (`sorryAx`) even where
-`--wfail` would not, for example one hidden behind a macro, and a new `axiom`.
+Building this module fails when a declaration of the `Agentica` library
+depends on an axiom outside `allowedAxioms`. It catches a `sorry` (`sorryAx`)
+even where `--wfail` would not, for example one hidden behind a macro, and a
+new `axiom`.
 
 Only the three standard axioms of Lean are allowed, so every proof is checked
 by the kernel. `native_decide` and `bv_decide` add an axiom per use
@@ -20,8 +21,8 @@ code: an `unsafe` constant, and a constant with `@[implemented_by]` or
 `debug.skipKernelTC` leaves no trace on a constant; `scripts/check.sh` greps
 for it.
 
-It sees only the modules that `Spec.lean` imports; `scripts/check.sh` fails
-when a file under `Spec/` is missing there.
+It sees only the modules that `Agentica.lean` imports; `scripts/check.sh`
+fails when a file under `Agentica/` is missing there.
 -/
 
 open Lean Elab Command
@@ -40,7 +41,7 @@ run_cmd do
   let mut bad : Array MessageData := #[]
   for (n, info) in env.constants.map₁.toList do
     let some m := moduleOf env n | continue
-    unless (`Spec).isPrefixOf m do continue
+    unless (`Agentica).isPrefixOf m do continue
     if info.isUnsafe then
       bad := bad.push m!"{n} is unsafe"
     if (Compiler.getImplementedBy? env n).isSome then

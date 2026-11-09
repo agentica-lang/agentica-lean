@@ -34,7 +34,7 @@ The build checks every proof. `--wfail` makes a `sorry` (or any other warning) f
 scripts/check.sh
 ```
 
-The axiom check also fails on escapes that add no axiom: an `unsafe` constant, and `@[implemented_by]` or `@[extern]`. `scripts/check.sh` runs the checks that the build cannot do alone: every file under `Spec/` is imported by `Spec.lean` (so the axiom check sees it), no file turns off the kernel with `debug.skipKernelTC`, and the axiom check itself still fails on a `sorry`, a `native_decide`, a `bv_decide` and each escape (`tests/AxiomFixture.lean`). CI runs it.
+The axiom check also fails on escapes that add no axiom: an `unsafe` constant, and `@[implemented_by]` or `@[extern]`. `scripts/check.sh` runs the checks that the build cannot do alone: every file under `Agentica/` is imported by `Agentica.lean` (so the axiom check sees it), no file turns off the kernel with `debug.skipKernelTC`, and the axiom check itself still fails on a `sorry`, a `native_decide`, a `bv_decide` and each escape (`tests/AxiomFixture.lean`). CI runs it.
 
 ## License
 
