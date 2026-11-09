@@ -1,0 +1,174 @@
+import Agentica
+
+/-!
+# The cases of the differential test
+
+`lake exe diffcases` prints one line per case, tab-separated:
+
+    id  function  arguments  expected
+
+It is the only source of cases: `diff/run.agc` reads the same lines, runs each
+case on agentica, and `scripts/difftest.py` compares. An argument is an `Int`
+in decimal, or a `Bytes` as a comma list (`-` for no bytes). The expected
+result is one of:
+
+- `int N`, `bool B`, `text S`: a value that cannot halt;
+- `halt CODE`: a runtime error, by its diagnostic code (never its message);
+- `ok N`, `error MESSAGE`: a `Result`. The message of a `Result` is a value
+  the function documents, so it is compared.
+-/
+
+open Agentica
+
+/-- A case: the function name, its arguments as text, the expected result. -/
+structure Case where
+  fn : String
+  args : List String
+  expected : String
+
+def showInt (a : AInt) : String := toString a.bits.toInt
+
+def showM (r : M AInt) : String :=
+  match r with
+  | .ok v => s!"int {showInt v}"
+  | .error e => s!"halt {e.code}"
+
+def showResult (r : M (Result AInt)) : String :=
+  match r with
+  | .ok (.ok v) => s!"ok {showInt v}"
+  | .ok (.error m) => s!"error {m}"
+  | .error e => s!"halt {e.code}"
+
+def showBytes (b : List UInt8) : String :=
+  if b.isEmpty then "-" else ",".intercalate (b.map (toString ·.toNat))
+
+def toBytes (b : List UInt8) : Bytes :=
+  if h : b.toArray.size < 2 ^ 63 then ⟨b.toArray, h⟩ else ⟨#[], by decide⟩
+
+def intMax : Int := 9223372036854775807
+def intMin : Int := -9223372036854775808
+
+/-- The values that the edge cases of every function start from. -/
+def edges : List Int :=
+  [0, 1, -1, 2, 255, 256, 4294967296, -4294967296, intMax, intMax - 1, intMin, intMin + 1]
+
+/-- Shift counts: negative, 0, inside, 63, 64 and above, and the extremes. -/
+def counts : List Int := [-1, 0, 1, 8, 63, 64, 65, 100, intMax, intMin]
+
+/-- Shifted values, with and without the sign bit. -/
+def shifted : List Int := [0, 1, -1, 5, -7, intMax, intMin, intMin + 1, 255]
+
+/-- SplitMix64: a fixed seed gives the same cases on every run. -/
+def next (s : UInt64) : UInt64 × UInt64 :=
+  let s := s + 0x9E3779B97F4A7C15
+  let z := (s ^^^ (s >>> 30)) * 0xBF58476D1CE4E5B9
+  let z := (z ^^^ (z >>> 27)) * 0x94D049BB133111EB
+  (z ^^^ (z >>> 31), s)
+
+/-- A random `Int`: the full range, or a small value, half of the time each. -/
+def randomInt (s : UInt64) : Int × UInt64 :=
+  let (a, s) := next s
+  let (b, s) := next s
+  if a % 2 == 0 then ((BitVec.ofNat 64 b.toNat).toInt, s)
+  else ((b % 2001).toNat - 1000, s)
+
+/-- A random value in `[lo, lo + span)`. -/
+def randomIn (s : UInt64) (lo : Int) (span : Nat) : Int × UInt64 :=
+  let (a, s) := next s
+  (lo + (a.toNat % span), s)
+
+def randomBytes (s : UInt64) : List UInt8 × UInt64 := Id.run do
+  let (n, s0) := next s
+  let mut s := s0
+  let mut out : List UInt8 := []
+  for _ in [0:(n.toNat % 7)] do
+    let (b, s') := next s
+    s := s'
+    out := out ++ [b.toUInt8]
+  return (out, s)
+
+def binaryInt : List (String × (AInt → AInt → M AInt)) :=
+  [("add", AInt.add), ("sub", AInt.sub), ("shift_left", AInt.shift_left),
+   ("shift_right", AInt.shift_right), ("shift_right_unsigned", AInt.shift_right_unsigned)]
+
+def binaryPure : List (String × (AInt → AInt → AInt)) :=
+  [("bit_and", AInt.bit_and), ("bit_or", AInt.bit_or), ("bit_xor", AInt.bit_xor)]
+
+def compares : List (String × (AInt → AInt → Bool)) :=
+  [("eq", AInt.eq), ("ne", AInt.ne), ("lt", AInt.lt), ("le", AInt.le), ("gt", AInt.gt),
+   ("ge", AInt.ge)]
+
+def binaryCase (fn : String) (a b : Int) (expected : String) : Case :=
+  { fn, args := [toString a, toString b], expected }
+
+def intCases (fn : String) (f : AInt → AInt → M AInt) (a b : Int) : Case :=
+  binaryCase fn a b (showM (f (AInt.ofInt a) (AInt.ofInt b)))
+
+def pureCases (fn : String) (f : AInt → AInt → AInt) (a b : Int) : Case :=
+  binaryCase fn a b s!"int {showInt (f (AInt.ofInt a) (AInt.ofInt b))}"
+
+def compareCase (fn : String) (f : AInt → AInt → Bool) (a b : Int) : Case :=
+  binaryCase fn a b s!"bool {f (AInt.ofInt a) (AInt.ofInt b)}"
+
+def unaryCases (a : Int) : List Case :=
+  [{ fn := "bit_not", args := [toString a],
+     expected := s!"int {showInt (AInt.bit_not (AInt.ofInt a))}" },
+   { fn := "from_int", args := [toString a],
+     expected := s!"text {String.from_int (AInt.ofInt a)}" }]
+
+def bytesCases (b : List UInt8) (i : Int) : List Case :=
+  let bytes := toBytes b
+  [{ fn := "length", args := [showBytes b], expected := s!"int {showInt (Bytes.length bytes)}" },
+   { fn := "at", args := [showBytes b, toString i],
+     expected := showM (Bytes.at bytes (AInt.ofInt i)) },
+   { fn := "read_u16_le", args := [showBytes b, toString i],
+     expected := showResult (Design.read_u16_le bytes (AInt.ofInt i)) }]
+
+/-- The fixed cases: the edges of every function. -/
+def fixedCases : List Case := Id.run do
+  let mut out : List Case := []
+  for a in edges do
+    for b in edges do
+      for (fn, f) in [("add", AInt.add), ("sub", AInt.sub)] do
+        out := out ++ [intCases fn f a b]
+      for (fn, f) in binaryPure do
+        out := out ++ [pureCases fn f a b]
+      for (fn, f) in compares do
+        out := out ++ [compareCase fn f a b]
+    out := out ++ unaryCases a
+  for a in shifted do
+    for n in counts do
+      for (fn, f) in binaryInt.drop 2 do
+        out := out ++ [intCases fn f a n]
+  let sample : List UInt8 := [1, 2, 255]
+  for i in [-1, 0, 1, 2, 3, intMax, intMin] do
+    out := out ++ bytesCases sample i
+  out := out ++ bytesCases [] 0
+  return out
+
+/-- Random cases from a fixed seed: `perFunction` for each function. -/
+def randomCases (seed : UInt64) (perFunction : Nat) : List Case := Id.run do
+  let mut s := seed
+  let mut out : List Case := []
+  for _ in [0:perFunction] do
+    let (a, s1) := randomInt s
+    let (b, s2) := randomInt s1
+    let (n, s3) := randomIn s2 (-3) 72
+    let (bytes, s4) := randomBytes s3
+    let (i, s5) := randomIn s4 (-2) (bytes.length + 4)
+    s := s5
+    for (fn, f) in binaryInt do
+      out := out ++ [intCases fn f a (if fn.startsWith "shift" then n else b)]
+    for (fn, f) in binaryPure do
+      out := out ++ [pureCases fn f a b]
+    for (fn, f) in compares do
+      out := out ++ [compareCase fn f a b]
+    out := out ++ unaryCases a ++ bytesCases bytes i
+  return out
+
+def main : IO Unit := do
+  let cases := fixedCases ++ randomCases 20261109 40
+  let mut id := 0
+  for c in cases do
+    IO.println s!"{id}\t{c.fn}\t{" ".intercalate c.args}\t{c.expected}"
+    id := id + 1

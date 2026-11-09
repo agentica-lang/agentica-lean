@@ -36,6 +36,16 @@ scripts/check.sh
 
 The axiom check also fails on escapes that add no axiom: an `unsafe` constant, and `@[implemented_by]` or `@[extern]`. `scripts/check.sh` runs the checks that the build cannot do alone: every file under `Agentica/` is imported by `Agentica.lean` (so the axiom check sees it), no file turns off the kernel with `debug.skipKernelTC`, and the axiom check itself still fails on a `sorry`, a `native_decide`, a `bv_decide` and each escape (`tests/AxiomFixture.lean`). CI runs it.
 
+## The differential test
+
+```sh
+AGENTICA=/path/to/agentica python3 scripts/difftest.py
+```
+
+`lake exe diffcases` prints the cases with the results of the Lean prelude: the edges of every function and random cases from a fixed seed. `diff/run.agc` runs the same cases on the `agentica` binary, and the script compares the values and the diagnostic codes (and the text of a `Result` error, which is a value). A failing case prints its arguments, the Lean result and the VM result. Without a binary the script skips.
+
+The prelude is checked against **agentica 0.27.0**: CI installs that release and checks its SHA-256. To move to a new release, change the version and the `linux-x86_64` SHA-256 (from the release's `SHA256SUMS`) in `.github/workflows/ci.yml`, run the test, and read the release notes for changed builtins. A difference is a change of the VM: fix the prelude function, its doc comment and its theorems to match, or report it to agentica if it is a bug there.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).

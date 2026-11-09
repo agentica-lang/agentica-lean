@@ -60,3 +60,15 @@ jobs:
       # The checks the build cannot do alone, and a self-test of the axiom check.
       - name: Check imports, escapes and the axiom check
         run: scripts/check.sh
+
+      # The agentica release the prelude is checked against (README.md).
+      - name: Install the pinned Agentica release
+        uses: agentica-lang/setup-agentica@2d68f4c3d20ca2c6567bf9dc2378543132f872a8 # v1
+        with:
+          version: 0.27.0
+          sha256: 87319417a3ad3338af8117e0885cbabf63ae54c8e4539318829c221a342342f9 # linux-x86_64
+
+      - name: Differential test against agentica
+        env:
+          REQUIRE_AGENTICA: "1"
+        run: python3 scripts/difftest.py
