@@ -1,16 +1,18 @@
 # agentica-lean
 
-Lean 4 specifications of Agentica builtins, their proofs, and differential
-tests against the real `agentica` binary. `README.md` says what is proved and
-what is not.
+A translator of pure Agentica functions to Lean 4, a Lean prelude that models
+the VM's types and builtins, and proofs of the translated code. The plan is
+issue #3; `README.md` says what is trusted (the translator, the prelude's
+model of the VM, the Lean kernel).
 
 ## Map
 
 ```text
 lean-toolchain   the pinned Lean version
 lakefile.toml    the Lake project: the `Spec` and `Check` libraries
-Spec.lean        the library root; imports every spec
-Spec/            one module per builtin: Spec/<Type>/<Method>.lean
+Spec.lean        the library root; imports every module under Spec/
+Spec/            the checked Lean code: the prelude, the translations and
+                 their proofs
 Check/Axioms.lean  fails the build when a Spec declaration uses an axiom
                  other than propext, Classical.choice and Quot.sound
 scripts/check.sh the checks around the build (imports, escapes, self-test)
@@ -38,13 +40,15 @@ tests/AxiomFixture.lean  bad proofs that the axiom check must reject
 - `Spec.lean` imports every file under `Spec/`; `scripts/check.sh` fails
   otherwise.
 - No Mathlib unless a proof needs it; then the PR says why.
-- A spec follows the real contract: read the VM code (`vm/`), the catalog row
-  (`compiler/catalog/builtins_data.agc`) and the site page
-  (`site/content/library/`) of agentica first.
-- An Agentica `Int` is a `BitVec 64` in a spec. An error is its diagnostic
-  code (`RUNTIME-...`), never its message.
+- A builtin in the prelude follows the real contract: read the VM code
+  (`vm/`), the catalog row (`compiler/catalog/builtins_data.agc`) and the
+  site page (`site/content/library/`) of agentica first.
+- An Agentica `Int` is a `BitVec 64`. A runtime error is its diagnostic code
+  (`RUNTIME-...`), never its message.
 - Differential tests compare values and diagnostic codes, never message text.
+- Translated files are generated: change the translator or the `.agc` source,
+  never the output by hand.
 - Pin every tool and action: Lean in `lean-toolchain`, elan and actions by
   version and hash in CI.
-- One builtin per PR; each PR says `Part of #N` or `Closes #N`.
+- Each PR says `Part of #N` or `Closes #N`.
 - Use simple words in the docs.

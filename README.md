@@ -1,23 +1,24 @@
 # agentica-lean
 
-Lean 4 specifications and proofs of [Agentica](https://github.com/agentica-lang/agentica) builtins, tied to the real VM by differential tests.
+Translate pure [Agentica](https://github.com/agentica-lang/agentica) functions to Lean 4, and prove things about the translated code.
 
 ## What this repo does
 
-For a builtin, it has:
+The plan is in issue #3. It has three parts:
 
-- **A specification.** A Lean definition that says what the builtin returns, or which error it raises, for every input. The Lean types follow the VM: an Agentica `Int` is 64 bits.
-- **Proofs.** Theorems about that definition, checked by the Lean kernel when you run `lake build`.
-- **Differential tests.** A Lean program prints the expected result of a table of cases. An Agentica program runs the same cases on the real `agentica` binary. A script compares the two: the values, and the diagnostic codes of the errors (never the message text).
+- **A translator** from `.agc` to Lean, for pure functions: no I/O, tasks, channels or FFI. It reads the checked program and writes one Lean definition per function. A function outside the subset it knows is refused with a clear message.
+- **A Lean prelude** that models the Agentica types and builtins the translated code calls. An `Int` is 64 bits, as in the VM, and a runtime error is its diagnostic code (`RUNTIME-...`), never its message. Each builtin in the prelude comes with theorems about it.
+- **Proofs** about the translated functions, beside them, checked by the Lean kernel. The first target is the little-endian readers of `std/binary`: the shifts and ORs equal `b0 + 256*b1 + ...`.
 
-The first builtin is `Int.shift_right_unsigned` (issue #1).
+## What is trusted
 
-## What it proves, and what it does not
+A proof here is about the Lean code. It says something about the real program only if these hold:
 
-- The theorems are about the Lean definition only. They show that the specification says what we mean, for all inputs.
-- The C code of the VM is **not** proved. It is tested through the binary, on the cases of the differential tests. A bug on an input that no case covers can still pass.
-- The tests run one pinned `agentica` release. A new release is checked when CI moves to it.
-- Proofs of the C code itself (for example with CBMC) belong in the agentica repo, in their own issue.
+- **The translator** writes Lean that means the same as the `.agc` source. It is not proved. CI checks that the committed translation matches its source (a `--check` mode), and a differential test runs the same inputs through the real `agentica` binary and through the Lean code, comparing values and diagnostic codes.
+- **The prelude** models the VM: each builtin in Lean does what the C code does. This is not proved either. The prelude follows the VM code, the builtin catalog and the site page of agentica, and the differential tests check it on their inputs. A bug on an input that no test covers can still pass.
+- **The Lean kernel** checks every proof (see below).
+
+The C code of the VM is not proved here, only tested through the binary. The tests run one pinned `agentica` release; a new release is checked when CI moves to it. Proofs of the C code itself (for example with CBMC) belong in the agentica repo.
 
 ## Use it
 
@@ -33,7 +34,7 @@ The build checks every proof. `--wfail` makes a `sorry` (or any other warning) f
 scripts/check.sh
 ```
 
-The axiom check also fails on escapes that add no axiom: an `unsafe` constant, and `@[implemented_by]` or `@[extern]`. This script runs the checks that the build cannot do alone: every file under `Spec/` is imported by `Spec.lean` (so the axiom check sees it), no file turns off the kernel with `debug.skipKernelTC`, and the axiom check itself still fails on a `sorry`, a `native_decide`, a `bv_decide` and each escape (`tests/AxiomFixture.lean`). CI runs it.
+The axiom check also fails on escapes that add no axiom: an `unsafe` constant, and `@[implemented_by]` or `@[extern]`. `scripts/check.sh` runs the checks that the build cannot do alone: every file under `Spec/` is imported by `Spec.lean` (so the axiom check sees it), no file turns off the kernel with `debug.skipKernelTC`, and the axiom check itself still fails on a `sorry`, a `native_decide`, a `bv_decide` and each escape (`tests/AxiomFixture.lean`). CI runs it.
 
 ## License
 
