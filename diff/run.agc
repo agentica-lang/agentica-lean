@@ -5,103 +5,222 @@
 # Prints `id<TAB>result` for each case from id START on, in the format of the
 # expected results. A case that halts ends the program with its diagnostic;
 # scripts/difftest.py records the code and starts again after it.
+#
+# The harness reads and checks every argument before it calls a builtin, and
+# never halts itself: a bad case prints `harness ...`. Each builtin call is in
+# its own `call_` function, so a halt is a result only when its stack reaches
+# one of them (scripts/difftest.py checks).
 import Binary from "std/binary"
 
-def int_arg(text: String) -> Int
-  return text.to_i!
+def call_add(a: Int, b: Int) -> String
+  return "int #{a + b}"
 end
 
-def bytes_arg(text: String) -> Bytes
-  if text == "-"
-    return Bytes.from_list([]).unwrap!
-  end
-  items = text.split(",").map do |part|
-    part.to_i!
-  end
-  return Bytes.from_list(items).unwrap!
+def call_sub(a: Int, b: Int) -> String
+  return "int #{a - b}"
 end
 
-def int_result(value: Int) -> String
-  return "int #{value}"
+def call_bit_and(a: Int, b: Int) -> String
+  return "int #{a.bit_and(b)}"
 end
 
-def bool_result(value: Bool) -> String
-  return "bool #{value}"
+def call_bit_or(a: Int, b: Int) -> String
+  return "int #{a.bit_or(b)}"
 end
 
-def result_text(found: Result[Int]) -> String
+def call_bit_xor(a: Int, b: Int) -> String
+  return "int #{a.bit_xor(b)}"
+end
+
+def call_bit_not(a: Int) -> String
+  return "int #{a.bit_not}"
+end
+
+def call_from_int(a: Int) -> String
+  return "text #{a.to_s}"
+end
+
+def call_shift_left(a: Int, b: Int) -> String
+  return "int #{a.shift_left(b)}"
+end
+
+def call_shift_right(a: Int, b: Int) -> String
+  return "int #{a.shift_right(b)}"
+end
+
+def call_shift_right_unsigned(a: Int, b: Int) -> String
+  return "int #{a.shift_right_unsigned(b)}"
+end
+
+def call_eq(a: Int, b: Int) -> String
+  return "bool #{a == b}"
+end
+
+def call_ne(a: Int, b: Int) -> String
+  return "bool #{a != b}"
+end
+
+def call_lt(a: Int, b: Int) -> String
+  return "bool #{a < b}"
+end
+
+def call_le(a: Int, b: Int) -> String
+  return "bool #{a <= b}"
+end
+
+def call_gt(a: Int, b: Int) -> String
+  return "bool #{a > b}"
+end
+
+def call_ge(a: Int, b: Int) -> String
+  return "bool #{a >= b}"
+end
+
+def call_length(data: Bytes) -> String
+  return "int #{data.size}"
+end
+
+def call_at(data: Bytes, i: Int) -> String
+  return "int #{data[i]}"
+end
+
+def call_read_u16_le(data: Bytes, offset: Int) -> String
+  found = Binary.read_u16_le(data, offset)
   if found.ok?
     return "ok #{found.unwrap!}"
   end
   return "error #{found.message}"
 end
 
-def run_bytes(name: String, args: List[String]) -> String
-  data = bytes_arg(args[0])
-  if name == "length"
-    return int_result(data.size)
-  elsif name == "at"
-    return int_result(data[int_arg(args[1])])
+# The number of arguments of each function, the first one a Bytes for the
+# last three; -1 for a name the harness does not know.
+def arity(name: String) -> Int
+  if name == "bit_not" or name == "from_int" or name == "length"
+    return 1
   end
-  return result_text(Binary.read_u16_le(data, int_arg(args[1])))
+  two = ["add", "sub", "bit_and", "bit_or", "bit_xor", "shift_left", "shift_right",
+    "shift_right_unsigned", "eq", "ne", "lt", "le", "gt", "ge", "at", "read_u16_le"]
+  if two.any? do |x| x == name end
+    return 2
+  end
+  return -1
 end
 
+def takes_bytes(name: String) -> Bool
+  return name == "length" or name == "at" or name == "read_u16_le"
+end
+
+# The bytes of a comma list (`-` for none), or an error.
+def parse_bytes(text: String) -> Result[Bytes]
+  if text == "-"
+    return Bytes.from_list([])
+  end
+  items: List[Int] = []
+  for part in text.split(",")
+    items = items.push(try part.to_i)
+  end
+  return Bytes.from_list(items)
+end
+
+# Checks and parses a case, then calls its builtin. Only the `call_` functions
+# may halt.
 def run_case(name: String, args: List[String]) -> String
-  if name == "length" or name == "at" or name == "read_u16_le"
-    return run_bytes(name, args)
+  if arity(name) < 0 or args.size != arity(name)
+    return "harness bad case: #{name} with #{args.size} arguments"
   end
-  a = int_arg(args[0])
-  if name == "bit_not"
-    return int_result(a.bit_not)
+  ints: List[Int] = []
+  first = 0
+  data = Bytes.from_list([]).unwrap!
+  if takes_bytes(name)
+    parsed = parse_bytes(args[0])
+    if not parsed.ok?
+      return "harness bad bytes: #{args[0]}"
+    end
+    data = parsed.unwrap!
+    first = 1
+  end
+  for k in first...args.size
+    value = args[k].to_i
+    if not value.ok?
+      return "harness bad Int: #{args[k]}"
+    end
+    ints = ints.push(value.unwrap!)
+  end
+  if name == "length"
+    return call_length(data)
+  elsif name == "at"
+    return call_at(data, ints[0])
+  elsif name == "read_u16_le"
+    return call_read_u16_le(data, ints[0])
+  elsif name == "bit_not"
+    return call_bit_not(ints[0])
   elsif name == "from_int"
-    return "text #{a.to_s}"
+    return call_from_int(ints[0])
   end
-  b = int_arg(args[1])
+  a = ints[0]
+  b = ints[1]
   if name == "add"
-    return int_result(a + b)
+    return call_add(a, b)
   elsif name == "sub"
-    return int_result(a - b)
+    return call_sub(a, b)
   elsif name == "bit_and"
-    return int_result(a.bit_and(b))
+    return call_bit_and(a, b)
   elsif name == "bit_or"
-    return int_result(a.bit_or(b))
+    return call_bit_or(a, b)
   elsif name == "bit_xor"
-    return int_result(a.bit_xor(b))
+    return call_bit_xor(a, b)
   elsif name == "shift_left"
-    return int_result(a.shift_left(b))
+    return call_shift_left(a, b)
   elsif name == "shift_right"
-    return int_result(a.shift_right(b))
+    return call_shift_right(a, b)
   elsif name == "shift_right_unsigned"
-    return int_result(a.shift_right_unsigned(b))
+    return call_shift_right_unsigned(a, b)
   elsif name == "eq"
-    return bool_result(a == b)
+    return call_eq(a, b)
   elsif name == "ne"
-    return bool_result(a != b)
+    return call_ne(a, b)
   elsif name == "lt"
-    return bool_result(a < b)
+    return call_lt(a, b)
   elsif name == "le"
-    return bool_result(a <= b)
+    return call_le(a, b)
   elsif name == "gt"
-    return bool_result(a > b)
-  elsif name == "ge"
-    return bool_result(a >= b)
+    return call_gt(a, b)
   end
-  return "unknown function #{name}"
+  return call_ge(a, b)
 end
 
 def main() -> Void
   args = System.args()
-  text = File.read_text(args[0]).unwrap!
-  start = args[1].to_i!
-  for line in text.split("\n")
-    if line == ""
+  if args.size != 2
+    puts("harness usage: run.agc CASES.tsv START")
+    return
+  end
+  text = File.read_text(args[0])
+  start = args[1].to_i
+  if not text.ok? or not start.ok?
+    puts("harness cannot read #{args[0]} or start #{args[1]}")
+    return
+  end
+  for line in text.unwrap!.split("\n")
+    fields = line.split("\t")
+    if line == "" or fields.size != 4
+      if line != ""
+        puts("harness bad line: #{line}")
+      end
       next
     end
-    fields = line.split("\t")
-    id = fields[0].to_i!
-    if id >= start
-      found = run_case(fields[1], fields[2].split(" "))
-      puts("#{id}\t#{found}")
+    id = fields[0].to_i
+    if not id.ok?
+      puts("harness bad id: #{line}")
+      next
+    end
+    if id.unwrap! >= start.unwrap!
+      case_args: List[String] = []
+      if fields[2] != ""
+        case_args = fields[2].split(" ")
+      end
+      found = run_case(fields[1], case_args)
+      puts("#{id.unwrap!}\t#{found}")
       IO.flush()
     end
   end

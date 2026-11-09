@@ -72,3 +72,10 @@ jobs:
         env:
           REQUIRE_AGENTICA: "1"
         run: python3 scripts/difftest.py
+
+      # Planted broken inputs (no cases, a lost function, a missing argument,
+      # a changed value): each must make the test fail.
+      - name: Self-test of the differential test
+        env:
+          REQUIRE_AGENTICA: "1"
+        run: python3 scripts/difftest.py --self-test

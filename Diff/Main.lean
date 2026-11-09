@@ -16,6 +16,9 @@ result is one of:
 - `halt CODE`: a runtime error, by its diagnostic code (never its message);
 - `ok N`, `error MESSAGE`: a `Result`. The message of a `Result` is a value
   the function documents, so it is compared.
+
+Nothing is escaped: no argument or result may hold a tab or a newline. A
+future `String` function needs an escape on both sides first.
 -/
 
 open Agentica

@@ -44,6 +44,9 @@ scripts/difftest.py  runs both and compares
   a test that the axiom check fails on a bad fixture. Run it after the build.
 - `scripts/difftest.py`: the differential test. It uses `$AGENTICA` or
   `agentica` on PATH, and skips without one (CI sets `REQUIRE_AGENTICA=1`).
+  `--self-test` checks that planted broken inputs fail. A new prelude
+  function needs its name in `FUNCTIONS` there, a `call_` function in
+  `diff/run.agc`, and cases in `Diff/Main.lean`.
 
 ## Rules
 

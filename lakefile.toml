@@ -1,6 +1,6 @@
 name = "agentica-lean"
 version = "0.1.0"
-defaultTargets = ["Agentica", "Check"]
+defaultTargets = ["Agentica", "Check", "diffcases"]
 
 # `Agentica.*` is the root and every module under Agentica/: each is built,
 # even one that Agentica.lean does not import. (`Agentica.+` would leave out
