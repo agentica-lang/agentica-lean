@@ -103,7 +103,9 @@ What #1159 must give for step 1:
   (`RUNTIME-INTEGER-OVERFLOW`, `RUNTIME-INDEX-OUT-OF-RANGE`, ...). A builtin
   that can halt (`+`, `data[i]`, `shift_left`) returns `M`; one that cannot
   (`<`, `bit_or`) is a plain function. Each is a prelude function, called by
-  its qualified name.
+  its full name (`Agentica.Bytes.at`): Lean has its own `String.length` and
+  others, so a short name could reach one when the prelude lacks the
+  builtin. Types keep their short names (`AInt`, `Bytes`, `Result`, `M`).
 - **Order.** Each step that can halt is a `←` in `do` notation, in the order
   the VM evaluates it (left to right). `a or b` is
   `if a then true else b`, so `b` runs only when it does in the VM.
@@ -149,7 +151,7 @@ What #1159 must give for step 1:
 
 ## The prelude needs first
 
-Each with its VM contract, in its own PR:
+Each with its VM contract, in its own PR (all in `Agentica/Prelude/` now):
 
 - `AInt.add`, `AInt.sub`: `RUNTIME-INTEGER-OVERFLOW` on signed overflow
   (`vm/interp.c`, `agc_op_add_i`, `agc_op_sub_i`).
