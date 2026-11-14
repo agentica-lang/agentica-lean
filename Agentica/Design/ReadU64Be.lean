@@ -4,7 +4,7 @@ import Agentica.Design.ReadU64Le
 # Design target: `read_u64_be` and `read_i64_be`, translated by hand
 
 A hand translation of `load64_be`, `read_u64_be` and `read_i64_be` of
-`stdlib/binary.agc` (agentica 0.27.0), with the rules of `ReadU16Le.lean`.
+`stdlib/binary.agc` (agentica 0.31.1), with the rules of `ReadU16Le.lean`.
 `unsigned64` is in `ReadU64Le.lean`.
 
 ```ruby
@@ -20,17 +20,15 @@ def load64_be(data: Bytes, offset: Int, type: String) -> Result[Int]
   h = data[offset + 7]
   high = a.shift_left(24).bit_or(b.shift_left(16)).bit_or(c.shift_left(8)).bit_or(d)
   low = e.shift_left(24).bit_or(f.shift_left(16)).bit_or(g.shift_left(8)).bit_or(h)
-  return ok(high.shift_left(32).bit_or(low))
+  ok(high.shift_left(32).bit_or(low))
 end
 
-export def read_u64_be(data: Bytes, offset: Int) -> Result[Int]
+def read_u64_be(data: Bytes, offset: Int) -> Result[Int]
   value = try load64_be(data, offset, "u64")
-  return unsigned64(value, offset)
+  unsigned64(value, offset)
 end
 
-export def read_i64_be(data: Bytes, offset: Int) -> Result[Int]
-  return load64_be(data, offset, "i64")
-end
+def read_i64_be(data: Bytes, offset: Int) -> Result[Int] = load64_be(data, offset, "i64")
 ```
 -/
 
@@ -38,7 +36,7 @@ namespace Agentica.Design
 
 def load64_be (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
   match ← window data offset (Agentica.AInt.ofInt 8) type with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok _ => pure ()
   let a ← Agentica.Bytes.at data offset
   let i1 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
@@ -72,7 +70,7 @@ def load64_be (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) :
 
 def read_u64_be (data : Bytes) (offset : AInt) : M (Result AInt) := do
   match ← load64_be data offset "u64" with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok value => unsigned64 value offset
 
 def read_i64_be (data : Bytes) (offset : AInt) : M (Result AInt) :=
@@ -158,7 +156,8 @@ theorem read_u64_be_in_range (data : Bytes) (offset : AInt)
     (data.byte offset.bits.toNat < 128 → ∃ c, read_u64_be data offset = pure (.ok c) ∧
       c.bits.toInt = be64 data offset.bits.toNat) ∧
     (128 ≤ data.byte offset.bits.toNat → read_u64_be data offset =
-      pure (.error ("u64 at offset " ++ String.from_int offset ++ " does not fit in Int"))) := by
+      pure (.error { kind := "number.range", message := (
+        "u64 at offset " ++ String.from_int offset ++ " does not fit in Int") })) := by
   have h0i : (AInt.ofInt 0).bits.toInt = 0 := AInt.ofInt_toInt (n := 0) (by omega)
   obtain ⟨hlt, hiff⟩ := be64_bounds data offset.bits.toNat
   have ht : (BitVec.ofNat 64 (be64 data offset.bits.toNat)).toInt =
@@ -183,8 +182,9 @@ theorem read_u64_be_in_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_u64_be` never halts and gives the documented error. -/
 theorem read_u64_be_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 8) :
-    read_u64_be data offset = pure (.error ("u64 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_u64_be data offset = pure (.error { kind := "argument", message := (
+      "u64 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h8i : (AInt.ofInt 8).bits.toInt = 8 := AInt.ofInt_toInt (n := 8) (by omega)
   rw [read_u64_be, load64_be, window_out data offset _ "u64" (by omega) (by omega)
     (by omega)]
@@ -193,8 +193,9 @@ theorem read_u64_be_out_of_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_i64_be` never halts and gives the documented error. -/
 theorem read_i64_be_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 8) :
-    read_i64_be data offset = pure (.error ("i64 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_i64_be data offset = pure (.error { kind := "argument", message := (
+      "i64 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h8i : (AInt.ofInt 8).bits.toInt = 8 := AInt.ofInt_toInt (n := 8) (by omega)
   rw [read_i64_be, load64_be, window_out data offset _ "i64" (by omega) (by omega)
     (by omega)]

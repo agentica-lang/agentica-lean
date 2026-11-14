@@ -4,7 +4,7 @@ import Agentica.Design.ReadU16Le
 # Design target: `read_u16_be`, translated by hand
 
 A hand translation of `load16_be` and `read_u16_be` of `stdlib/binary.agc`
-(agentica 0.27.0), with the rules of `ReadU16Le.lean`: types by short name,
+(agentica 0.31.1), with the rules of `ReadU16Le.lean`: types by short name,
 prelude calls by full name, one step per source step.
 
 ```ruby
@@ -12,12 +12,10 @@ def load16_be(data: Bytes, offset: Int, type: String) -> Result[Int]
   try window(data, offset, 2, type)
   a = data[offset]
   b = data[offset + 1]
-  return ok(a.shift_left(8).bit_or(b))
+  ok(a.shift_left(8).bit_or(b))
 end
 
-export def read_u16_be(data: Bytes, offset: Int) -> Result[Int]
-  return load16_be(data, offset, "u16")
-end
+def read_u16_be(data: Bytes, offset: Int) -> Result[Int] = load16_be(data, offset, "u16")
 ```
 -/
 
@@ -25,7 +23,7 @@ namespace Agentica.Design
 
 def load16_be (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
   match ← window data offset (Agentica.AInt.ofInt 2) type with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok _ => pure ()
   let a ← Agentica.Bytes.at data offset
   let i ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
@@ -73,8 +71,9 @@ theorem read_u16_be_toInt (data : Bytes) (offset : AInt)
 /-- Out of range, `read_u16_be` never halts and gives the documented error. -/
 theorem read_u16_be_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 2) :
-    read_u16_be data offset = pure (.error ("u16 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_u16_be data offset = pure (.error { kind := "argument", message := (
+      "u16 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
   rw [read_u16_be, load16_be, window_out data offset _ "u16" (by omega) (by omega)
     (by omega)]

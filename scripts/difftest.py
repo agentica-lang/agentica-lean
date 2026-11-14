@@ -163,6 +163,17 @@ def self_test(agentica: str, text: str) -> int:
         out[0] = "\t".join([id_, fn, args, expected + "1"]) + "\n"
         return "".join(out)
 
+    def planted_wrong_kind() -> str:
+        # The first Result error, with another kind and the same message.
+        out = list(lines)
+        for k, line in enumerate(out):
+            id_, fn, args, expected = line.rstrip("\n").split("\t")
+            if expected.startswith("error argument "):
+                wrong = expected.replace("error argument ", "error number.range ", 1)
+                out[k] = "\t".join([id_, fn, args, wrong]) + "\n"
+                return "".join(out)
+        raise AssertionError("no error argument case")
+
     def planted_halt(function: str, expected: str) -> tuple[bool, str]:
         # A halt in `function` of a program other than diff/run.agc: the run
         # must be refused, naming that frame.
@@ -192,6 +203,7 @@ def self_test(agentica: str, text: str) -> int:
          "functions differ"),
         ("a case with a missing argument", planted_missing_argument(), "harness bad case"),
         ("a changed expected value", planted_changed_value(), None),
+        ("a wrong error kind", planted_wrong_kind(), None),
     ]
     bad = 0
     for name, planted_text, reason in planted:

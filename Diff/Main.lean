@@ -14,8 +14,9 @@ result is one of:
 
 - `int N`, `bool B`, `text S`: a value that cannot halt;
 - `halt CODE`: a runtime error, by its diagnostic code (never its message);
-- `ok N`, `error MESSAGE`: a `Result`. The message of a `Result` is a value
-  the function documents, so it is compared.
+- `ok N`, `error KIND MESSAGE`: a `Result`. The kind and the message of its
+  `Error` are values the function documents, so both are compared (a kind is
+  a dotted name, with no space).
 
 Nothing is escaped: no argument or result may hold a tab or a newline. A
 future `String` function needs an escape on both sides first.
@@ -39,7 +40,7 @@ def showM (r : M AInt) : String :=
 def showResult (r : M (Result AInt)) : String :=
   match r with
   | .ok (.ok v) => s!"ok {showInt v}"
-  | .ok (.error m) => s!"error {m}"
+  | .ok (.error e) => s!"error {e.kind} {e.message}"
   | .error e => s!"halt {e.code}"
 
 def showBytes (b : List UInt8) : String :=
