@@ -10,7 +10,7 @@ The plan is in issue #3, and the design in [docs/translator.md](docs/translator.
 - **A Lean prelude** that models the Agentica types and builtins the translated code calls. An `Int` is 64 bits, as in the VM, and a runtime error is its diagnostic code (`RUNTIME-...`), never its message. Each builtin in the prelude comes with theorems about it; the first one is `Int.shift_right_unsigned` (`Agentica/Prelude/Int/ShiftRightUnsigned.lean`).
 - **Proofs** about the translated functions, beside them, checked by the Lean kernel. The first target is the little-endian readers of `std/binary`: the shifts and ORs equal `b0 + 256*b1 + ...`.
 
-**Status (November 2026):** Done today: the prelude for `Int`, `Bytes` and `Result`, the translator (`translator/`), which writes every integer reader of `std/binary` (`read_u8`/`read_i8` and the 16-, 32- and 64-bit readers, big- and little-endian) to `Agentica/Std/Binary.lean` from the typed tree of `Analysis.bodies` ([agentica#1159](https://github.com/agentica-lang/agentica/issues/1159)), and proofs about them (`Agentica/Std/Binary/Proofs/`). The differential test runs them and the prelude against agentica 0.32.0-alpha.1.
+**Status (November 2026):** Done today: the prelude for `Int`, `Bytes` and `Result`, the translator (`translator/`), which writes every integer reader of `std/binary` (`read_u8`/`read_i8` and the 16-, 32- and 64-bit readers, big- and little-endian) and `read_frame_length` to `Agentica/Std/Binary.lean` from the typed tree of `Analysis.bodies` ([agentica#1159](https://github.com/agentica-lang/agentica/issues/1159)), and proofs about them (`Agentica/Std/Binary/Proofs/`). The differential test runs them and the prelude against agentica 0.32.0-alpha.1.
 
 ## What is trusted
 

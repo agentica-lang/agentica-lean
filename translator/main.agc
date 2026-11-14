@@ -9,7 +9,7 @@ JOBS = [
     source: "std/binary",
     roots: [
       "read_u8", "read_i8", "read_u16_be", "read_u16_le", "read_i16_be", "read_i16_le", "read_u32_be", "read_u32_le",
-      "read_i32_be", "read_i32_le", "read_u64_be", "read_u64_le", "read_i64_be", "read_i64_le",
+      "read_i32_be", "read_i32_le", "read_u64_be", "read_u64_le", "read_i64_be", "read_i64_le", "read_frame_length",
     ],
     path: "Agentica/Std/Binary.lean",
     namespace: "Agentica.Std.Binary",

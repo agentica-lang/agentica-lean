@@ -237,4 +237,14 @@ def read_i64_be (data : Bytes) (offset : AInt) : M (Result AInt) :=
 def read_i64_le (data : Bytes) (offset : AInt) : M (Result AInt) :=
   Agentica.Std.Binary.load64_le data offset "i64"
 
+def read_frame_length (data : Bytes) (offset max : AInt) : M (Result AInt) := do
+  if Agentica.AInt.lt max (Agentica.AInt.ofInt 0) then
+    return .error { kind := "argument", message := "frame limit " ++ Agentica.String.from_int max ++ " is negative" }
+  match ← Agentica.Std.Binary.load32_be data offset "u32" with
+  | .error e => return .error e
+  | .ok length =>
+    if Agentica.AInt.gt length max then
+      return .error { kind := "binary.too_large", message := "frame length " ++ Agentica.String.from_int length ++ " is above the limit " ++ Agentica.String.from_int max }
+    return .ok length
+
 end Agentica.Std.Binary

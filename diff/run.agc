@@ -140,6 +140,10 @@ def call_read_i64_be(data: Bytes, offset: Int) -> String
   return result_text(Binary.read_i64_be(data, offset))
 end
 
+def call_read_frame_length(data: Bytes, offset: Int, max: Int) -> String
+  return result_text(Binary.read_frame_length(data, offset, max))
+end
+
 # The text of a reader's Result. It never halts.
 def result_text(found: Result[Int]) -> String
   case found
@@ -160,6 +164,9 @@ def arity(name: String) -> Int
     "read_u32_be", "read_u64_be", "read_i16_be", "read_i32_be", "read_i64_be"]
   if two.any? do |x| x == name end
     return 2
+  end
+  if name == "read_frame_length"
+    return 3
   end
   return -1
 end
@@ -236,6 +243,8 @@ def run_case(name: String, args: List[String]) -> String
     return call_read_i32_be(data, ints[0])
   elsif name == "read_i64_be"
     return call_read_i64_be(data, ints[0])
+  elsif name == "read_frame_length"
+    return call_read_frame_length(data, ints[0], ints[1])
   elsif name == "bit_not"
     return call_bit_not(ints[0])
   elsif name == "from_int"

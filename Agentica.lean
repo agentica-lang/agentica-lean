@@ -13,6 +13,7 @@ import Agentica.Prelude.RuntimeError
 import Agentica.Prelude.String.FromInt
 import Agentica.Std.Binary
 import Agentica.Std.Binary.Proofs.Read8
+import Agentica.Std.Binary.Proofs.ReadFrameLength
 import Agentica.Std.Binary.Proofs.ReadSigned
 import Agentica.Std.Binary.Proofs.ReadSignedBe
 import Agentica.Std.Binary.Proofs.ReadU16Be
