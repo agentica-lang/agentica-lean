@@ -6,18 +6,18 @@ import Agentica.Design.ReadU32Be
 # Design target: the big-endian signed readers, translated by hand
 
 A hand translation of `read_i16_be` and `read_i32_be` of `stdlib/binary.agc`
-(agentica 0.27.0), with the rules of `ReadU16Le.lean`. `extend` is in
+(agentica 0.31.1), with the rules of `ReadU16Le.lean`. `extend` is in
 `ReadSigned.lean`.
 
 ```ruby
-export def read_i16_be(data: Bytes, offset: Int) -> Result[Int]
+def read_i16_be(data: Bytes, offset: Int) -> Result[Int]
   value = try load16_be(data, offset, "i16")
-  return ok(extend(value, 16))
+  ok(extend(value, 16))
 end
 
-export def read_i32_be(data: Bytes, offset: Int) -> Result[Int]
+def read_i32_be(data: Bytes, offset: Int) -> Result[Int]
   value = try load32_be(data, offset, "i32")
-  return ok(extend(value, 32))
+  ok(extend(value, 32))
 end
 ```
 -/
@@ -26,14 +26,14 @@ namespace Agentica.Design
 
 def read_i16_be (data : Bytes) (offset : AInt) : M (Result AInt) := do
   match ← load16_be data offset "i16" with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok value =>
     let v ← extend value (Agentica.AInt.ofInt 16)
     return .ok v
 
 def read_i32_be (data : Bytes) (offset : AInt) : M (Result AInt) := do
   match ← load32_be data offset "i32" with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok value =>
     let v ← extend value (Agentica.AInt.ofInt 32)
     return .ok v
@@ -73,8 +73,9 @@ theorem read_i32_be_in_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_i16_be` never halts and gives the documented error. -/
 theorem read_i16_be_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 2) :
-    read_i16_be data offset = pure (.error ("i16 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_i16_be data offset = pure (.error { kind := "argument", message := (
+      "i16 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
   rw [read_i16_be, load16_be, window_out data offset _ "i16" (by omega) (by omega)
     (by omega)]
@@ -83,8 +84,9 @@ theorem read_i16_be_out_of_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_i32_be` never halts and gives the documented error. -/
 theorem read_i32_be_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 4) :
-    read_i32_be data offset = pure (.error ("i32 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_i32_be data offset = pure (.error { kind := "argument", message := (
+      "i32 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h4i : (AInt.ofInt 4).bits.toInt = 4 := AInt.ofInt_toInt (n := 4) (by omega)
   rw [read_i32_be, load32_be, window_out data offset _ "i32" (by omega) (by omega)
     (by omega)]

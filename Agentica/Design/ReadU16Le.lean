@@ -11,7 +11,7 @@ import Agentica.Prelude.String.FromInt
 
 This file is a **hand translation**. It shows the Lean that the translator of
 `docs/translator.md` must write for `window`, `load16_le` and `read_u16_le` of
-`stdlib/binary.agc` (agentica 0.27.0), and theorems about them. The tool must
+`stdlib/binary.agc` (agentica 0.31.1), and theorems about them. The tool must
 reproduce the three definitions; the file goes away when it does.
 
 Everything it calls comes from the prelude, by its full name
@@ -30,21 +30,19 @@ The source, from `stdlib/binary.agc`:
 ```ruby
 def window(data: Bytes, offset: Int, n: Int, type: String) -> Result[Void]
   if offset < 0 or offset > data.size - n
-    return error("#{type} at offset #{offset} is outside bytes of length #{data.size}")
+    return error("#{type} at offset #{offset} is outside bytes of length #{data.size}", kind: "argument")
   end
-  return ok()
+  ok()
 end
 
 def load16_le(data: Bytes, offset: Int, type: String) -> Result[Int]
   try window(data, offset, 2, type)
   a = data[offset]
   b = data[offset + 1]
-  return ok(b.shift_left(8).bit_or(a))
+  ok(b.shift_left(8).bit_or(a))
 end
 
-export def read_u16_le(data: Bytes, offset: Int) -> Result[Int]
-  return load16_le(data, offset, "u16")
-end
+def read_u16_le(data: Bytes, offset: Int) -> Result[Int] = load16_le(data, offset, "u16")
 ```
 
 Each step that can halt is a `←`, in the order of the source. `or` does not
@@ -58,13 +56,14 @@ def window (data : Bytes) (offset n : AInt) (type : String) : M (Result Unit) :=
     let limit ← Agentica.AInt.sub (Agentica.Bytes.length data) n
     pure (Agentica.AInt.gt offset limit)
   if out then
-    return .error (type ++ " at offset " ++ Agentica.String.from_int offset ++
-      " is outside bytes of length " ++ Agentica.String.from_int (Agentica.Bytes.length data))
+    return .error { kind := "argument", message := (
+      type ++ " at offset " ++ Agentica.String.from_int offset ++
+        " is outside bytes of length " ++ Agentica.String.from_int (Agentica.Bytes.length data)) }
   return .ok ()
 
 def load16_le (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
   match ← window data offset (Agentica.AInt.ofInt 2) type with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok _ => pure ()
   let a ← Agentica.Bytes.at data offset
   let i ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
@@ -96,9 +95,10 @@ theorem window_ok (data : Bytes) (offset n : AInt) (type : String)
 theorem window_out (data : Bytes) (offset n : AInt) (type : String)
     (hn : 0 ≤ n.bits.toInt) (hn8 : n.bits.toInt ≤ 8)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + n.bits.toInt) :
-    window data offset n type = pure (.error (type ++ " at offset " ++
-      String.from_int offset ++ " is outside bytes of length " ++
-      String.from_int (Bytes.length data))) := by
+    window data offset n type = pure (.error { kind := "argument", message := (
+      type ++ " at offset " ++
+        String.from_int offset ++ " is outside bytes of length " ++
+        String.from_int (Bytes.length data)) }) := by
   have := data.small
   have h0i : (AInt.ofInt 0).bits.toInt = 0 := AInt.ofInt_toInt (n := 0) (by omega)
   have hsz := Bytes.length_toInt data
@@ -174,8 +174,9 @@ theorem read_u16_le_toInt (data : Bytes) (offset : AInt)
 a negative offset, or one where two bytes do not fit (up to `Int.MAX`). -/
 theorem read_u16_le_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 2) :
-    read_u16_le data offset = pure (.error ("u16 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_u16_le data offset = pure (.error { kind := "argument", message := (
+      "u16 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have := data.small
   have h0i : (AInt.ofInt 0).bits.toInt = 0 := AInt.ofInt_toInt (n := 0) (by omega)
   have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
@@ -198,20 +199,23 @@ theorem read_u16_le_out_of_range (data : Bytes) (offset : AInt)
 /-! ## The cases compared with agentica
 
 `Binary.read_u16_le` on the bytes `[1, 2, 255]` printed these results (agentica
-0.24.1, by hand); the kernel checks the translation gives the same. -/
+0.31.1, by hand); the kernel checks the translation gives the same. -/
 
 example : read_u16_le Bytes.sample (AInt.ofInt (-1)) =
-    pure (.error "u16 at offset -1 is outside bytes of length 3") := rfl
+    pure (.error { kind := "argument", message := (
+      "u16 at offset -1 is outside bytes of length 3") }) := rfl
 
 example : read_u16_le Bytes.sample (AInt.ofInt 0) = pure (.ok (AInt.ofInt 513)) := rfl
 
 example : read_u16_le Bytes.sample (AInt.ofInt 1) = pure (.ok (AInt.ofInt 65282)) := rfl
 
 example : read_u16_le Bytes.sample (AInt.ofInt 2) =
-    pure (.error "u16 at offset 2 is outside bytes of length 3") := rfl
+    pure (.error { kind := "argument", message := (
+      "u16 at offset 2 is outside bytes of length 3") }) := rfl
 
 example : read_u16_le Bytes.sample (AInt.ofInt 9223372036854775807) =
-    pure (.error "u16 at offset 9223372036854775807 is outside bytes of length 3") := by
+    pure (.error { kind := "argument", message := (
+      "u16 at offset 9223372036854775807 is outside bytes of length 3") }) := by
   rfl
 
 end Agentica.Design

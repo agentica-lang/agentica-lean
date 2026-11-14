@@ -142,10 +142,10 @@ end
 
 # The text of a reader's Result. It never halts.
 def result_text(found: Result[Int]) -> String
-  if found.ok?
-    return "ok #{found.unwrap!}"
+  case found
+    ok(n) -> "ok #{n}"
+    error(e) -> "error #{e.kind} #{e.message}"
   end
-  return "error #{found.message}"
 end
 
 # The number of arguments of each function, the first one a Bytes for the

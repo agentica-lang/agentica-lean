@@ -5,23 +5,21 @@ import Agentica.Prelude.Int.ShiftRight
 # Design target: the signed readers, translated by hand
 
 A hand translation of `extend`, `read_i16_le` and `read_i32_le` of
-`stdlib/binary.agc` (agentica 0.27.0), with the rules of `ReadU16Le.lean`.
+`stdlib/binary.agc` (agentica 0.31.1), with the rules of `ReadU16Le.lean`.
 `extend` moves the sign bit of a `bits`-bit value to bit 63 and back with an
 arithmetic shift.
 
 ```ruby
-def extend(value: Int, bits: Int) -> Int
-  return value.shift_left(64 - bits).shift_right(64 - bits)
-end
+def extend(value: Int, bits: Int) -> Int = value.shift_left(64 - bits).shift_right(64 - bits)
 
-export def read_i16_le(data: Bytes, offset: Int) -> Result[Int]
+def read_i16_le(data: Bytes, offset: Int) -> Result[Int]
   value = try load16_le(data, offset, "i16")
-  return ok(extend(value, 16))
+  ok(extend(value, 16))
 end
 
-export def read_i32_le(data: Bytes, offset: Int) -> Result[Int]
+def read_i32_le(data: Bytes, offset: Int) -> Result[Int]
   value = try load32_le(data, offset, "i32")
-  return ok(extend(value, 32))
+  ok(extend(value, 32))
 end
 ```
 -/
@@ -36,14 +34,14 @@ def extend (value bits : AInt) : M AInt := do
 
 def read_i16_le (data : Bytes) (offset : AInt) : M (Result AInt) := do
   match ← load16_le data offset "i16" with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok value =>
     let v ← extend value (Agentica.AInt.ofInt 16)
     return .ok v
 
 def read_i32_le (data : Bytes) (offset : AInt) : M (Result AInt) := do
   match ← load32_le data offset "i32" with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok value =>
     let v ← extend value (Agentica.AInt.ofInt 32)
     return .ok v
@@ -126,8 +124,9 @@ theorem read_i32_le_in_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_i16_le` never halts and gives the documented error. -/
 theorem read_i16_le_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 2) :
-    read_i16_le data offset = pure (.error ("i16 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_i16_le data offset = pure (.error { kind := "argument", message := (
+      "i16 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h2i : (AInt.ofInt 2).bits.toInt = 2 := AInt.ofInt_toInt (n := 2) (by omega)
   rw [read_i16_le, load16_le, window_out data offset _ "i16" (by omega) (by omega)
     (by omega)]
@@ -136,8 +135,9 @@ theorem read_i16_le_out_of_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_i32_le` never halts and gives the documented error. -/
 theorem read_i32_le_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 4) :
-    read_i32_le data offset = pure (.error ("i32 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_i32_le data offset = pure (.error { kind := "argument", message := (
+      "i32 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h4i : (AInt.ofInt 4).bits.toInt = 4 := AInt.ofInt_toInt (n := 4) (by omega)
   rw [read_i32_le, load32_le, window_out data offset _ "i32" (by omega) (by omega)
     (by omega)]

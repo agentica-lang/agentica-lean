@@ -4,7 +4,7 @@ import Agentica.Design.ReadU32Le
 # Design target: `read_u32_be`, translated by hand
 
 A hand translation of `load32_be` and `read_u32_be` of `stdlib/binary.agc`
-(agentica 0.27.0), with the rules of `ReadU16Le.lean`. It is `load32_le` with
+(agentica 0.31.1), with the rules of `ReadU16Le.lean`. It is `load32_le` with
 the bytes in the other order, so `or_bytes4` of `ReadU32Le.lean` proves it too.
 
 ```ruby
@@ -14,12 +14,10 @@ def load32_be(data: Bytes, offset: Int, type: String) -> Result[Int]
   b = data[offset + 1]
   c = data[offset + 2]
   d = data[offset + 3]
-  return ok(a.shift_left(24).bit_or(b.shift_left(16)).bit_or(c.shift_left(8)).bit_or(d))
+  ok(a.shift_left(24).bit_or(b.shift_left(16)).bit_or(c.shift_left(8)).bit_or(d))
 end
 
-export def read_u32_be(data: Bytes, offset: Int) -> Result[Int]
-  return load32_be(data, offset, "u32")
-end
+def read_u32_be(data: Bytes, offset: Int) -> Result[Int] = load32_be(data, offset, "u32")
 ```
 -/
 
@@ -27,7 +25,7 @@ namespace Agentica.Design
 
 def load32_be (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
   match ← window data offset (Agentica.AInt.ofInt 4) type with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok _ => pure ()
   let a ← Agentica.Bytes.at data offset
   let i1 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
@@ -93,8 +91,9 @@ theorem read_u32_be_in_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_u32_be` never halts and gives the documented error. -/
 theorem read_u32_be_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 4) :
-    read_u32_be data offset = pure (.error ("u32 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_u32_be data offset = pure (.error { kind := "argument", message := (
+      "u32 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h4i : (AInt.ofInt 4).bits.toInt = 4 := AInt.ofInt_toInt (n := 4) (by omega)
   rw [read_u32_be, load32_be, window_out data offset _ "u32" (by omega) (by omega)
     (by omega)]

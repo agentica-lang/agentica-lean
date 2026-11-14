@@ -4,23 +4,21 @@ import Agentica.Design.ReadSigned
 # Design target: `read_u8` and `read_i8`, translated by hand
 
 A hand translation of `load8`, `read_u8` and `read_i8` of `stdlib/binary.agc`
-(agentica 0.27.0), with the rules of `ReadU16Le.lean`. `extend` is in
+(agentica 0.31.1), with the rules of `ReadU16Le.lean`. `extend` is in
 `ReadSigned.lean`.
 
 ```ruby
 def load8(data: Bytes, offset: Int, type: String) -> Result[Int]
   try window(data, offset, 1, type)
   a = data[offset]
-  return ok(a)
+  ok(a)
 end
 
-export def read_u8(data: Bytes, offset: Int) -> Result[Int]
-  return load8(data, offset, "u8")
-end
+def read_u8(data: Bytes, offset: Int) -> Result[Int] = load8(data, offset, "u8")
 
-export def read_i8(data: Bytes, offset: Int) -> Result[Int]
+def read_i8(data: Bytes, offset: Int) -> Result[Int]
   value = try load8(data, offset, "i8")
-  return ok(extend(value, 8))
+  ok(extend(value, 8))
 end
 ```
 -/
@@ -29,7 +27,7 @@ namespace Agentica.Design
 
 def load8 (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
   match ← window data offset (Agentica.AInt.ofInt 1) type with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok _ => pure ()
   let a ← Agentica.Bytes.at data offset
   return .ok a
@@ -39,7 +37,7 @@ def read_u8 (data : Bytes) (offset : AInt) : M (Result AInt) :=
 
 def read_i8 (data : Bytes) (offset : AInt) : M (Result AInt) := do
   match ← load8 data offset "i8" with
-  | .error message => return .error message
+  | .error e => return .error e
   | .ok value =>
     let v ← extend value (Agentica.AInt.ofInt 8)
     return .ok v
@@ -90,8 +88,9 @@ theorem read_i8_in_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_u8` never halts and gives the documented error. -/
 theorem read_u8_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 1) :
-    read_u8 data offset = pure (.error ("u8 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_u8 data offset = pure (.error { kind := "argument", message := (
+      "u8 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h1i : (AInt.ofInt 1).bits.toInt = 1 := AInt.ofInt_toInt (n := 1) (by omega)
   rw [read_u8, load8, window_out data offset _ "u8" (by omega) (by omega) (by omega)]
   rfl
@@ -99,8 +98,9 @@ theorem read_u8_out_of_range (data : Bytes) (offset : AInt)
 /-- Out of range, `read_i8` never halts and gives the documented error. -/
 theorem read_i8_out_of_range (data : Bytes) (offset : AInt)
     (h : offset.bits.toInt < 0 ∨ data.data.size < offset.bits.toInt + 1) :
-    read_i8 data offset = pure (.error ("i8 at offset " ++ String.from_int offset ++
-      " is outside bytes of length " ++ String.from_int (Bytes.length data))) := by
+    read_i8 data offset = pure (.error { kind := "argument", message := (
+      "i8 at offset " ++ String.from_int offset ++
+        " is outside bytes of length " ++ String.from_int (Bytes.length data)) }) := by
   have h1i : (AInt.ofInt 1).bits.toInt = 1 := AInt.ofInt_toInt (n := 1) (by omega)
   rw [read_i8, load8, window_out data offset _ "i8" (by omega) (by omega) (by omega)]
   rfl

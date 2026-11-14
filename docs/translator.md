@@ -40,8 +40,8 @@ use:
   and `shift_left`, `shift_right`, `bit_or`;
 - `Bytes`: `data.size` (an alias of `Bytes.length`) and `data[i]` (it halts
   outside the bytes);
-- `Result`: `ok`, `error` with a message, and `try` as a statement and as an
-  expression;
+- `Result`: `ok`, `error` with a message and a kind, and `try` as a statement
+  and as an expression;
 - a string interpolation of `String` and `Int`;
 - local bindings, `if`, `return`, and calls of private functions of the same
   file.
@@ -97,8 +97,8 @@ What #1159 must give for step 1:
   operators), `Bool` is `Bool`, `String` is `String`, `Bytes` is a structure
   around `Array UInt8` with a size below `2^63`, `Void` is `Unit`,
   `Optional[T]` is `Option`, and `Result[T]` is the prelude's `Result`: `ok`,
-  or `error` with a `String`. Structs and enums (step 2) become structures
-  and inductives.
+  or `error` with an `Error` (its kind and message). Structs and enums
+  (step 2) become structures and inductives.
 - **Runtime errors.** A runtime error halts the program, so it is not a
   `Result`: every translated function returns `M T`, with
   `M := Except RuntimeError`, one constructor per diagnostic code
@@ -112,7 +112,7 @@ What #1159 must give for step 1:
   the VM evaluates it (left to right). `a or b` is
   `if a then true else b`, so `b` runs only when it does in the VM.
 - **`case`, `Result`, `try`.** `case` is `match`, with the same patterns.
-  `try e` is `match ← e with | .error m => return .error m | .ok v => ...`.
+  `try e` is `match ← e with | .error e => return .error e | .ok v => ...`.
   `return` is `return`.
 - **Literals.** `AInt.ofInt 2`; an interpolation is `++`, with
   `String.from_int` for an `Int` part (the VM's `TO_TEXT` writes the same
