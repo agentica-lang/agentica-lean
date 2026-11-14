@@ -7,7 +7,7 @@ translation, and `Agentica/Std/Binary/Proofs/` holds the theorems.
 
 ## What agentica gives today
 
-Checked against agentica 0.32.0-alpha.1 (`stdlib/analysis.agc`,
+Checked against agentica 0.32.0-alpha.2 (`stdlib/analysis.agc`,
 `site/content/library/analysis.md`, the query commands of the CLI).
 
 - `std/analysis` answers `check`, `outline` (declarations and signatures),
