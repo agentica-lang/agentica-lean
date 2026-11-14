@@ -120,15 +120,15 @@ def unaryCases (a : Int) : List Case :=
    { fn := "from_int", args := [toString a],
      expected := s!"text {String.from_int (AInt.ofInt a)}" }]
 
-/-- The other readers of `std/binary`, translated by hand in `Agentica/Design/`. -/
+/-- The other readers of `std/binary`, as `translator/` writes them (`Agentica/Std/Binary.lean`). -/
 def readers : List (String × (Bytes → AInt → M (Result AInt))) :=
-  [("read_u16_be", Design.read_u16_be), ("read_u32_le", Design.read_u32_le),
-   ("read_u64_le", Design.read_u64_le), ("read_i64_le", Design.read_i64_le),
-   ("read_i16_le", Design.read_i16_le), ("read_i32_le", Design.read_i32_le),
-   ("read_u8", Design.read_u8), ("read_i8", Design.read_i8),
-   ("read_u32_be", Design.read_u32_be), ("read_u64_be", Design.read_u64_be),
-   ("read_i16_be", Design.read_i16_be), ("read_i32_be", Design.read_i32_be),
-   ("read_i64_be", Design.read_i64_be)]
+  [("read_u16_be", Std.Binary.read_u16_be), ("read_u32_le", Std.Binary.read_u32_le),
+   ("read_u64_le", Std.Binary.read_u64_le), ("read_i64_le", Std.Binary.read_i64_le),
+   ("read_i16_le", Std.Binary.read_i16_le), ("read_i32_le", Std.Binary.read_i32_le),
+   ("read_u8", Std.Binary.read_u8), ("read_i8", Std.Binary.read_i8),
+   ("read_u32_be", Std.Binary.read_u32_be), ("read_u64_be", Std.Binary.read_u64_be),
+   ("read_i16_be", Std.Binary.read_i16_be), ("read_i32_be", Std.Binary.read_i32_be),
+   ("read_i64_be", Std.Binary.read_i64_be)]
 
 def bytesCases (b : List UInt8) (i : Int) : List Case :=
   let bytes := toBytes b
@@ -136,7 +136,7 @@ def bytesCases (b : List UInt8) (i : Int) : List Case :=
    { fn := "at", args := [showBytes b, toString i],
      expected := showM (Bytes.at bytes (AInt.ofInt i)) },
    { fn := "read_u16_le", args := [showBytes b, toString i],
-     expected := showResult (Design.read_u16_le bytes (AInt.ofInt i)) }] ++
+     expected := showResult (Std.Binary.read_u16_le bytes (AInt.ofInt i)) }] ++
   readers.map fun (fn, f) =>
     { fn, args := [showBytes b, toString i], expected := showResult (f bytes (AInt.ofInt i)) }
 

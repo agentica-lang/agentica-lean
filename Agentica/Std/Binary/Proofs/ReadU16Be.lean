@@ -1,38 +1,12 @@
-import Agentica.Design.ReadU16Le
+import Agentica.Std.Binary.Proofs.ReadU16Le
 
 /-!
-# Design target: `read_u16_be`, translated by hand
+# `read_u16_be`
 
-A hand translation of `load16_be` and `read_u16_be` of `stdlib/binary.agc`
-(agentica 0.31.1), with the rules of `ReadU16Le.lean`: types by short name,
-prelude calls by full name, one step per source step.
-
-```ruby
-def load16_be(data: Bytes, offset: Int, type: String) -> Result[Int]
-  try window(data, offset, 2, type)
-  a = data[offset]
-  b = data[offset + 1]
-  ok(a.shift_left(8).bit_or(b))
-end
-
-def read_u16_be(data: Bytes, offset: Int) -> Result[Int] = load16_be(data, offset, "u16")
-```
+Theorems about `load16_be` and `read_u16_be` of `Agentica/Std/Binary.lean`.
 -/
 
-namespace Agentica.Design
-
-def load16_be (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
-  match ← window data offset (Agentica.AInt.ofInt 2) type with
-  | .error e => return .error e
-  | .ok _ => pure ()
-  let a ← Agentica.Bytes.at data offset
-  let i ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
-  let b ← Agentica.Bytes.at data i
-  let s ← Agentica.AInt.shift_left a (Agentica.AInt.ofInt 8)
-  return .ok (Agentica.AInt.bit_or s b)
-
-def read_u16_be (data : Bytes) (offset : AInt) : M (Result AInt) :=
-  load16_be data offset "u16"
+namespace Agentica.Std.Binary
 
 /-- In range, `load16_be` never halts and is `256 * b0 + b1`, for any type
 name. -/
@@ -79,4 +53,4 @@ theorem read_u16_be_out_of_range (data : Bytes) (offset : AInt)
     (by omega)]
   rfl
 
-end Agentica.Design
+end Agentica.Std.Binary

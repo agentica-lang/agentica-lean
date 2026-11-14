@@ -1,48 +1,14 @@
-import Agentica.Design.ReadU32Le
+import Agentica.Std.Binary.Proofs.ReadU32Le
 
 /-!
-# Design target: `read_u32_be`, translated by hand
+# `read_u32_be`
 
-A hand translation of `load32_be` and `read_u32_be` of `stdlib/binary.agc`
-(agentica 0.31.1), with the rules of `ReadU16Le.lean`. It is `load32_le` with
-the bytes in the other order, so `or_bytes4` of `ReadU32Le.lean` proves it too.
-
-```ruby
-def load32_be(data: Bytes, offset: Int, type: String) -> Result[Int]
-  try window(data, offset, 4, type)
-  a = data[offset]
-  b = data[offset + 1]
-  c = data[offset + 2]
-  d = data[offset + 3]
-  ok(a.shift_left(24).bit_or(b.shift_left(16)).bit_or(c.shift_left(8)).bit_or(d))
-end
-
-def read_u32_be(data: Bytes, offset: Int) -> Result[Int] = load32_be(data, offset, "u32")
-```
+Theorems about `load32_be` and `read_u32_be` of `Agentica/Std/Binary.lean`.
+It is `load32_le` with the bytes in the other order, so `or_bytes4` of
+`ReadU32Le.lean` proves it too.
 -/
 
-namespace Agentica.Design
-
-def load32_be (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
-  match ← window data offset (Agentica.AInt.ofInt 4) type with
-  | .error e => return .error e
-  | .ok _ => pure ()
-  let a ← Agentica.Bytes.at data offset
-  let i1 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
-  let b ← Agentica.Bytes.at data i1
-  let i2 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 2)
-  let c ← Agentica.Bytes.at data i2
-  let i3 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 3)
-  let d ← Agentica.Bytes.at data i3
-  let s1 ← Agentica.AInt.shift_left a (Agentica.AInt.ofInt 24)
-  let s2 ← Agentica.AInt.shift_left b (Agentica.AInt.ofInt 16)
-  let o1 := Agentica.AInt.bit_or s1 s2
-  let s3 ← Agentica.AInt.shift_left c (Agentica.AInt.ofInt 8)
-  let o2 := Agentica.AInt.bit_or o1 s3
-  return .ok (Agentica.AInt.bit_or o2 d)
-
-def read_u32_be (data : Bytes) (offset : AInt) : M (Result AInt) :=
-  load32_be data offset "u32"
+namespace Agentica.Std.Binary
 
 /-! ## Theorems -/
 
@@ -99,4 +65,4 @@ theorem read_u32_be_out_of_range (data : Bytes) (offset : AInt)
     (by omega)]
   rfl
 
-end Agentica.Design
+end Agentica.Std.Binary

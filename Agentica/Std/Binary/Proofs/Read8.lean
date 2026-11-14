@@ -1,46 +1,13 @@
-import Agentica.Design.ReadSigned
+import Agentica.Std.Binary.Proofs.ReadSigned
 
 /-!
-# Design target: `read_u8` and `read_i8`, translated by hand
+# `read_u8` and `read_i8`
 
-A hand translation of `load8`, `read_u8` and `read_i8` of `stdlib/binary.agc`
-(agentica 0.31.1), with the rules of `ReadU16Le.lean`. `extend` is in
-`ReadSigned.lean`.
-
-```ruby
-def load8(data: Bytes, offset: Int, type: String) -> Result[Int]
-  try window(data, offset, 1, type)
-  a = data[offset]
-  ok(a)
-end
-
-def read_u8(data: Bytes, offset: Int) -> Result[Int] = load8(data, offset, "u8")
-
-def read_i8(data: Bytes, offset: Int) -> Result[Int]
-  value = try load8(data, offset, "i8")
-  ok(extend(value, 8))
-end
-```
+Theorems about `load8`, `read_u8` and `read_i8` of `Agentica/Std/Binary.lean`,
+which `translator/` writes from `std/binary`.
 -/
 
-namespace Agentica.Design
-
-def load8 (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
-  match ← window data offset (Agentica.AInt.ofInt 1) type with
-  | .error e => return .error e
-  | .ok _ => pure ()
-  let a ← Agentica.Bytes.at data offset
-  return .ok a
-
-def read_u8 (data : Bytes) (offset : AInt) : M (Result AInt) :=
-  load8 data offset "u8"
-
-def read_i8 (data : Bytes) (offset : AInt) : M (Result AInt) := do
-  match ← load8 data offset "i8" with
-  | .error e => return .error e
-  | .ok value =>
-    let v ← extend value (Agentica.AInt.ofInt 8)
-    return .ok v
+namespace Agentica.Std.Binary
 
 /-! ## Theorems -/
 
@@ -105,4 +72,4 @@ theorem read_i8_out_of_range (data : Bytes) (offset : AInt)
   rw [read_i8, load8, window_out data offset _ "i8" (by omega) (by omega) (by omega)]
   rfl
 
-end Agentica.Design
+end Agentica.Std.Binary
