@@ -442,7 +442,7 @@ def expr(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, t
       ok(Term(gen: t.gen, text: "(!#{arg(t)})", atom: true, hoisted: t.hoisted))
     "interpolation" -> interpolation(functions, gen, node)
     "list" ->
-      a = try arguments(functions, gen, node)
+      a = try arguments(functions, gen, node, [])
       ok(Term(gen: a.gen, text: "[#{a.texts.join(", ")}]", atom: true, hoisted: a.hoisted))
     "try" ->
       name = fresh(gen)
@@ -515,7 +515,7 @@ def parts(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, 
     "error" -> error_call(functions, gen, node, top)
     _ ->
       if functions.key?(node.target)
-        a = try arguments(functions, gen, node)
+        a = try arguments(functions, gen, node, functions[node.target].params.map { |p| p.name })
         text = (["#{gen.namespace}.#{ident(node.target)}"] + a.texts).join(" ")
         return ok(Parts(gen: a.gen, text: text, atom: a.texts.empty?, halts: true, hoisted: a.hoisted))
       end
@@ -544,26 +544,34 @@ def operator(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Nod
   error(refuse(node, "the expression #{node.kind}"))
 end
 
-# The arguments run in the order of the source; `children` has named ones in the order of the parameters.
-def arguments(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node) -> Result[Arguments]
+# The arguments in the order the VM runs them, which is the order of `children`; a `named` node (its text the
+# parameter name) goes to the place of its parameter in `params`.
+def arguments(
+  functions: Map[String, Analysis.Body],
+  gen: Gen,
+  node: Analysis.Node,
+  params: List[String],
+) -> Result[Arguments]
   g = gen
   texts: Map[Int, String] = {}
   hoisted = false
-  for i in source_order(node.children)
-    t = try expr(functions, g, node.children[i], false)
+  for i in 0...node.children.size
+    child = node.children[i]
+    place = i
+    value = child
+    if child.kind == "named"
+      found = (0...params.size).to_a.select { |k| params[k] == child.text }
+      return error(refuse(child, "the named argument #{child.text}")) if found.empty?
+
+      place = found[0]
+      value = child.children[0]
+    end
+    t = try expr(functions, g, value, false)
     g = t.gen
-    texts = texts.put(i, arg(t))
+    texts = texts.put(place, arg(t))
     hoisted = hoisted or t.hoisted
   end
-  ok(Arguments(gen: g, texts: (0...node.children.size).map { |i| texts[i] }, hoisted: hoisted))
-end
-
-# By line, then column, then position in `nodes`, as a key of fixed-width numbers.
-def source_order(nodes: List[Analysis.Node]) -> List[Int]
-  (0...nodes.size).to_a.sort_by do |i|
-    start = nodes[i].range.start
-    format("%020d %020d %020d", start.line, start.column, i)
-  end
+  ok(Arguments(gen: g, texts: (0...texts.size).map { |i| texts[i] }, hoisted: hoisted))
 end
 
 def builtin_call(
@@ -572,7 +580,7 @@ def builtin_call(
   node: Analysis.Node,
   builtin: Builtin,
 ) -> Result[Parts]
-  a = try arguments(functions, gen, node)
+  a = try arguments(functions, gen, node, [])
   g = a.gen.with(modules: a.gen.modules.add(builtin.module))
   ok(Parts(gen: g, text: ([builtin.lean] + a.texts).join(" "), atom: false, halts: builtin.halts, hoisted: a.hoisted))
 end
@@ -589,7 +597,8 @@ end
 def error_call(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, top: Bool) -> Result[Parts]
   return error(refuse(node, "error(e) with an Error")) if node.children[0].type.name != "String"
 
-  only_kind = node.children.size == 1 or (node.children.size == 2 and node.children[1].type.name == "String")
+  kind_node = node.children.size == 2 and node.children[1].kind == "named" and node.children[1].text == "kind"
+  only_kind = node.children.size == 1 or (kind_node and node.children[1].children[0].type.name == "String")
   return error(refuse(node, "error(...) with code, details or cause")) if !only_kind
 
   message = try expr(functions, gen, node.children[0], top)
@@ -597,7 +606,7 @@ def error_call(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.N
   kind = ""
   hoisted = message.hoisted
   if node.children.size == 2
-    k = try expr(functions, g, node.children[1], top)
+    k = try expr(functions, g, node.children[1].children[0], top)
     g = k.gen
     kind = "kind := #{k.text}, "
     hoisted = hoisted or k.hoisted

@@ -123,9 +123,10 @@ all of it.
   (`Agentica.Std.Binary.window`), so a local or a Lean name (`pure`) cannot
   hide it; the code the translator adds is qualified too (`Pure.pure`), and its
   fresh names (`t1`, ...) avoid every name of the file.
-- **Arguments.** They run in the order of the source. `Analysis.bodies` gives
-  named arguments in the order of the parameters, so the translator binds
-  them by the start of their range.
+- **Arguments.** They run in the order of the source, which is the order
+  `Analysis.bodies` gives them in. A named argument is a `named` node with the
+  parameter name, so the translator binds it first and passes it in the place
+  of its parameter.
 - **Recursion (step 1).** A recursive function becomes a Lean `def`. If Lean
   cannot prove that it ends, the build fails, and the function stays out of
   the translation until a later step adds termination hints. In practice
