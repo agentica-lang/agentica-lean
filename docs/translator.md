@@ -8,27 +8,26 @@ its theorems.
 
 ## What agentica gives today
 
-Checked against agentica 0.31.1 (`stdlib/analysis.agc`,
+Checked against agentica 0.32.0-alpha.1 (`stdlib/analysis.agc`,
 `site/content/library/analysis.md`, the query commands of the CLI).
 
 - `std/analysis` answers `check`, `outline` (declarations and signatures),
   `type_at`, `symbol`, `refs` and `native_modules`. The CLI has the same
   queries: `outline`, `type-at`, `symbol`, `refs`.
-- Since 0.28.0 it also has `bodies` (and `bodies_json`), the first PR of
-  agentica#1159: the functions of a file with their bodies as a typed tree.
-  It is experimental, its shape may change between releases, and it has no
-  CLI form. The other PRs of #1159 wait while this repo is paused.
+- It also has `bodies` (and `bodies_json`, agentica#1159): the functions of a
+  file with their bodies as a typed tree, the resolved call targets and
+  whether each is pure. It is experimental, its shape may change between
+  releases, and it has no CLI form. `translator/` reads it.
 - Inside the compiler, the checker keeps no typed tree either. `Checked`
   (`compiler/check/checker.agc`) is a set of side tables over the untyped
   AST: the type of each node by id, what each method call or field resolved
   to, and the prelude function each call of a prelude builtin runs.
   `bodies` (`compiler/analysis/bodies.agc`) builds its typed tree from the
   AST and these tables.
-- agentica#1159 (open, milestone 0.32.0)
-  asks for `Analysis.bodies(session, path)` and its JSON form: the functions
-  of a file with resolved types, the body as a typed tree with resolved call
-  targets, whether each function is pure (with the reason when not), struct
-  and enum types, and spans. It was written for an SMT tool,
+- agentica#1159 asked for `Analysis.bodies(session, path)` and its JSON form:
+  the functions of a file with resolved types, the body as a typed tree with
+  resolved call targets, whether each function is pure (with the reason when
+  not), struct and enum types, and spans. It was written for an SMT tool,
   `agentica-lang/verify`, also written in Agentica.
 
 ## What the readers need
@@ -139,14 +138,21 @@ What #1159 must give for step 1:
 
 ## Layout and the `--check` mode
 
-- `translator/`: the Agentica program.
-- `Agentica/Std/Binary.lean`: generated from `std/binary`. The header names
-  the agentica version and the SHA-256 of the source, and says that the file
-  is generated. The source comes from the binary itself, so pinning the
-  binary pins the source.
-- `Agentica/Std/Binary/Proofs.lean`: the theorems, written by hand.
-- `agentica translator/main.agc --check` translates again in memory and
-  exits 1 with the list of stale files. CI runs it with the pinned release.
+- `translator/`: the Agentica program. `main.agc` lists the jobs (a `std/`
+  module, the functions to translate, the Lean file); `lean.agc` writes Lean
+  from `Analysis.bodies`; `lean_test.agc` is its tests (`agentica test
+  translator`).
+- `Agentica/Std/Binary.lean`: generated from `std/binary`, with the integer
+  readers and the helpers they call. Its header says that it is generated.
+  The source comes from the binary itself (`std/binary` without a buffer), so
+  pinning the binary pins the source.
+- `Agentica/Design/Translated.lean`: the kernel checks by `rfl` that each
+  generated definition is the hand translation of `Agentica/Design/`. The
+  proofs move to the generated code in the next step, and the hand
+  translations go away.
+- `agentica translator/main.agc` writes the files; `--check` translates
+  again in memory and exits 1 naming each stale file. CI runs it with the
+  pinned release.
 - The differential test: a `lake exe` and an `.agc` program print the results
   of the same inputs, and a script compares the values and the diagnostic
   codes.
