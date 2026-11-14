@@ -76,8 +76,16 @@ jobs:
           agentica lint --strict translator
           agentica test translator
 
+      # A stale file must fail the check.
       - name: Check the translations
-        run: agentica translator/main.agc --check
+        run: |
+          agentica translator/main.agc --check
+          echo "-- stale" >> Agentica/Std/Binary.lean
+          if agentica translator/main.agc --check; then
+            echo "--check passed a stale file"
+            exit 1
+          fi
+          git checkout -- Agentica/Std/Binary.lean
 
       - name: Differential test against agentica
         env:

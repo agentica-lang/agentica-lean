@@ -118,6 +118,13 @@ all of it.
   text as `n.to_s`).
 - **Names.** A call takes the name the checker resolved, not the one written:
   `data.size` is `Bytes.length` (an alias, `compiler/check/check_tables.agc`).
+  A call of a function of the file is written by its full name
+  (`Agentica.Std.Binary.window`), so a local or a Lean name (`pure`) cannot
+  hide it; the code the translator adds is qualified too (`Pure.pure`), and its
+  fresh names (`t1`, ...) avoid every name of the file.
+- **Arguments.** They run in the order of the source. `Analysis.bodies` gives
+  named arguments in the order of the parameters, so the translator binds
+  them by the start of their range.
 - **Recursion (step 1).** A recursive function becomes a Lean `def`. If Lean
   cannot prove that it ends, the build fails, and the function stays out of
   the translation until a later step adds termination hints. In practice

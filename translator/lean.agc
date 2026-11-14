@@ -22,7 +22,7 @@ def translate(job: Job, found: Analysis.Bodies) -> Result[String]
   defs: List[String] = []
   for name in order
     body = functions[name]
-    out = try function_text(functions, body)
+    out = try function_text(functions, body, job.namespace)
     defs = defs.push(out.text)
     modules = modules.union(out.modules)
   end
@@ -74,10 +74,13 @@ OPERATORS = {
   ">=": Builtin(lean: "Agentica.AInt.ge", halts: false, module: COMPARE),
 }
 KEYWORDS = Set.new([
-  "at", "by", "calc", "catch", "def", "deriving", "do", "else", "end", "finally", "for", "from", "fun", "have", "if",
-  "import", "in", "instance", "let", "macro", "match", "mut", "namespace", "nomatch", "open", "partial", "return",
-  "section", "show", "structure", "suffices", "syntax", "then", "theorem", "try", "unless", "variable", "where",
-  "with",
+  "abbrev", "at", "attribute", "axiom", "by", "calc", "catch", "class", "decreasing_by", "def", "deriving", "do",
+  "else", "end", "example", "export", "extends", "finally", "for", "from", "fun", "have", "hiding", "if", "import",
+  "in", "include", "inductive", "infix", "infixl", "infixr", "instance", "lemma", "let", "local", "macro",
+  "macro_rules", "match", "mutual", "mut", "namespace", "noncomputable", "nofun", "nomatch", "notation", "omit",
+  "opaque", "open", "partial", "postfix", "prefix", "private", "protected", "public", "renaming", "return", "rfl",
+  "section", "set_option", "show", "structure", "suffices", "syntax", "termination_by", "then", "theorem", "try",
+  "universe", "unless", "variable", "where", "with",
 ])
 
 # A Lean term and the generator after it: `atom` when it needs no parentheses as an argument, `hoisted` when making
@@ -107,6 +110,7 @@ struct Gen
   taken: Set[String]
   modules: Set[String]
   terminal: Bool
+  namespace: String
 end
 
 struct Arguments
@@ -173,18 +177,20 @@ def calls(nodes: List[Analysis.Node], functions: Map[String, Analysis.Body]) -> 
   end
 end
 
-def function_text(functions: Map[String, Analysis.Body], body: Analysis.Body) -> Result[Function]
+def function_text(functions: Map[String, Analysis.Body], body: Analysis.Body, namespace: String) -> Result[Function]
   return error("#{body.name}: not pure (#{reasons(body)})") if !body.pure
   return error("#{body.name}: generic functions are a later step") if !body.generics.empty?
 
   params = try parameters(body)
   result = try lean_type(body.result, body.name)
-  start = Gen(lines: [], indent: 2, next: 1, taken: Set.new(names(body)), modules: Set.new([]), terminal: false)
+  taken = Set.new(names(body) + functions.keys)
+  start = Gen(lines: [], indent: 2, next: 1, taken: taken, modules: Set.new([]), terminal: false, namespace: namespace)
+
   gen = try block(functions, start, body.body, true)
   if !gen.terminal
     return error("#{body.name}: a path ends without a value") if !(result == "Unit")
 
-    gen = emit(gen, "pure ()")
+    gen = emit(gen, "Pure.pure ()")
   end
   head = "def #{ident(body.linked)}#{params} : M #{wrap(result)} :="
   one = gen.lines.size == 1 and simple?(gen.lines[0])
@@ -311,7 +317,7 @@ def bind(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, n
 end
 
 def try_statement(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node) -> Result[Gen]
-  match_try(functions, gen, node, "| .ok _ => pure ()", false)
+  match_try(functions, gen, node, "| .ok _ => Pure.pure ()", false)
 end
 
 # `try e`: a `match` whose `error` arm returns the error. With `nested`, the rest of the block goes in the `ok` arm,
@@ -354,20 +360,21 @@ def if_statement(functions: Map[String, Analysis.Body], gen: Gen, branches: List
   return block(functions, gen, first.children, false) if first.kind == "block"
 
   condition = try expr(functions, gen, first.children[0], true)
-  inner = condition.gen.with(lines: [], indent: gen.indent + 2)
+  at = condition.gen
+  inner = at.with(lines: [], indent: at.indent + 2)
   then_gen = try closed(try block(functions, inner, first.children[1].children, false))
-  lines = emit(gen.with(lines: condition.gen.lines), "if #{condition.text} then").lines + then_gen.lines
+  lines = emit(at, "if #{condition.text} then").lines + then_gen.lines
   rest = branches.drop(1)
   if rest.empty?
     return ok(
-      gen.with(lines: lines, next: then_gen.next, taken: then_gen.taken, modules: then_gen.modules, terminal: false),
+      at.with(lines: lines, next: then_gen.next, taken: then_gen.taken, modules: then_gen.modules, terminal: false),
     )
   end
-  else_start = then_gen.with(lines: [], indent: gen.indent + 2)
+  else_start = then_gen.with(lines: [], indent: at.indent + 2)
   else_gen = try closed(try if_statement(functions, else_start, rest))
-  all = emit(gen.with(lines: lines), "else").lines + else_gen.lines
+  all = emit(at.with(lines: lines), "else").lines + else_gen.lines
   ok(
-    gen.with(
+    at.with(
       lines: all,
       next: else_gen.next,
       taken: else_gen.taken,
@@ -381,7 +388,7 @@ end
 def closed(gen: Gen) -> Result[Gen]
   return ok(gen) if gen.terminal
 
-  ok(emit(gen, "pure ()"))
+  ok(emit(gen, "Pure.pure ()"))
 end
 
 # A call or an operator, not yet bound, or any other expression as a term.
@@ -439,6 +446,7 @@ def short(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, 
   left = try expr(functions, gen, node.children[0], true)
   inner = left.gen.with(lines: [], indent: left.gen.indent + 2)
   right = try expr(functions, inner, node.children[1], true)
+  return error(refuse(node, "try on the right of #{node.kind}")) if right.gen.indent != inner.indent
   after = left.gen.with(next: right.gen.next, taken: right.gen.taken, modules: right.gen.modules)
   if right.gen.lines.empty?
     text = choose(
@@ -450,17 +458,17 @@ def short(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, 
     return ok(Term(gen: after, text: "(#{text})", atom: true, hoisted: left.hoisted))
   end
   name = fresh(after)
-  body = right.gen.lines.push(" " * (gen.indent + 2) + "pure #{arg(right)}")
+  body = right.gen.lines.push(" " * (gen.indent + 2) + "Pure.pure #{arg(right)}")
   head = choose(
     is_or,
-    "let #{name.text} ← if #{left.text} then pure true else do",
+    "let #{name.text} ← if #{left.text} then Pure.pure true else do",
     "let #{name.text} ← if #{left.text} then do",
   )
 
   g = emit(name.gen, head)
   lines = g.lines + body
   if !is_or
-    lines = lines.push(" " * gen.indent + "else pure false")
+    lines = lines.push(" " * gen.indent + "else Pure.pure false")
   end
   ok(name.with(gen: g.with(lines: lines)))
 end
@@ -484,14 +492,7 @@ def interpolation(functions: Map[String, Analysis.Body], gen: Gen, node: Analysi
   end
   return ok(Term(gen: g, text: "\"\"", atom: true, hoisted: false)) if pieces.empty?
 
-  ok(
-    Term(
-      gen: g,
-      text: pieces.join(" ++ "),
-      atom: pieces.size == 1 and node.children[0].kind != "call",
-      hoisted: hoisted,
-    ),
-  )
+  ok(Term(gen: g, text: pieces.join(" ++ "), atom: pieces.size == 1 and !pieces[0].include?(" "), hoisted: hoisted))
 end
 
 # A call or an operator: its target, and its arguments as terms.
@@ -508,7 +509,7 @@ def parts(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, 
     _ ->
       if functions.key?(node.target)
         a = try arguments(functions, gen, node)
-        text = ([ident(node.target)] + a.texts).join(" ")
+        text = (["#{gen.namespace}.#{ident(node.target)}"] + a.texts).join(" ")
         return ok(Parts(gen: a.gen, text: text, atom: a.texts.empty?, halts: true, hoisted: a.hoisted))
       end
       return error(refuse(node, "the builtin #{node.target}")) if !BUILTINS.key?(node.target)
@@ -517,19 +518,22 @@ def parts(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, 
   end
 end
 
+# The arguments run in the order of the source; `children` has named ones in the order of the parameters.
 def arguments(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node) -> Result[Arguments]
   g = gen
-  texts: List[String] = []
+  texts: Map[Int, String] = {}
   hoisted = false
-  for child in node.children
-    return error(refuse(child, "a left-out argument (default)")) if child.kind == "default"
-
-    t = try expr(functions, g, child, false)
+  for i in source_order(node.children)
+    t = try expr(functions, g, node.children[i], false)
     g = t.gen
-    texts = texts.push(arg(t))
+    texts = texts.put(i, arg(t))
     hoisted = hoisted or t.hoisted
   end
-  ok(Arguments(gen: g, texts: texts, hoisted: hoisted))
+  ok(Arguments(gen: g, texts: (0...node.children.size).map { |i| texts[i] }, hoisted: hoisted))
+end
+
+def source_order(nodes: List[Analysis.Node]) -> List[Int]
+  (0...nodes.size).to_a.sort_by { |i| nodes[i].range.start.line * 1000000 + nodes[i].range.start.column }
 end
 
 def builtin_call(
@@ -553,16 +557,16 @@ end
 
 # `error(message)` and `error(message, kind: k)`: the `Error` record, its kind `"error"` by default.
 def error_call(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, top: Bool) -> Result[Parts]
-  return error(refuse(node, "error(e) with an Error")) if !(node.children[0].type.name == "String")
+  return error(refuse(node, "error(e) with an Error")) if node.children[0].type.name != "String"
 
-  for extra in node.children.drop(2)
-    return error(refuse(extra, "error(...) with code, details or cause")) if !(extra.kind == "default")
-  end
+  only_kind = node.children.size == 1 or (node.children.size == 2 and node.children[1].type.name == "String")
+  return error(refuse(node, "error(...) with code, details or cause")) if !only_kind
+
   message = try expr(functions, gen, node.children[0], top)
   g = message.gen
   kind = ""
   hoisted = message.hoisted
-  if node.children.size > 1 and node.children[1].kind != "default"
+  if node.children.size == 2
     k = try expr(functions, g, node.children[1], top)
     g = k.gen
     kind = "kind := #{k.text}, "
