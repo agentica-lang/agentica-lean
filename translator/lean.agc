@@ -532,8 +532,12 @@ def arguments(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.No
   ok(Arguments(gen: g, texts: (0...node.children.size).map { |i| texts[i] }, hoisted: hoisted))
 end
 
+# By line, then column, then position in `nodes`, as a key of fixed-width numbers.
 def source_order(nodes: List[Analysis.Node]) -> List[Int]
-  (0...nodes.size).to_a.sort_by { |i| nodes[i].range.start.line * 1000000 + nodes[i].range.start.column }
+  (0...nodes.size).to_a.sort_by do |i|
+    start = nodes[i].range.start
+    format("%020d %020d %020d", start.line, start.column, i)
+  end
 end
 
 def builtin_call(
