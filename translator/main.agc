@@ -10,6 +10,9 @@ JOBS = [
     roots: [
       "read_u8", "read_i8", "read_u16_be", "read_u16_le", "read_i16_be", "read_i16_le", "read_u32_be", "read_u32_le",
       "read_i32_be", "read_i32_le", "read_u64_be", "read_u64_le", "read_i64_be", "read_i64_le", "read_frame_length",
+      "write_u8", "write_i8", "write_u16_be", "write_u16_le", "write_i16_be", "write_i16_le", "write_u32_be",
+      "write_u32_le", "write_i32_be", "write_i32_le", "write_u64_be", "write_u64_le", "write_i64_be", "write_i64_le",
+      "frame",
     ],
     path: "Agentica/Std/Binary.lean",
     namespace: "Agentica.Std.Binary",

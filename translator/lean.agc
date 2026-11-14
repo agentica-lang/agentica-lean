@@ -62,7 +62,15 @@ BUILTINS = {
   "Int.to_s": Builtin(lean: "Agentica.String.from_int", halts: false, module: "Agentica.Prelude.String.FromInt"),
   "Bytes.length": Builtin(lean: "Agentica.Bytes.length", halts: false, module: "Agentica.Prelude.Bytes"),
   "Bytes.at": Builtin(lean: "Agentica.Bytes.at", halts: true, module: "Agentica.Prelude.Bytes"),
+  "Bytes.from_list": Builtin(
+    lean: "Agentica.Bytes.from_list",
+    halts: false,
+    module: "Agentica.Prelude.Bytes.FromList",
+  ),
+  "Result.unwrap!": Builtin(lean: "Agentica.Result.unwrap!", halts: true, module: "Agentica.Prelude.Result.Unwrap"),
 }
+BYTES_PLUS = Builtin(lean: "Agentica.Bytes.plus", halts: false, module: "Agentica.Prelude.Bytes.Plus")
+NEG = Builtin(lean: "Agentica.AInt.neg", halts: true, module: "Agentica.Prelude.Int.Neg")
 OPERATORS = {
   "+": Builtin(lean: "Agentica.AInt.add", halts: true, module: ARITH),
   "-": Builtin(lean: "Agentica.AInt.sub", halts: true, module: ARITH),
@@ -244,6 +252,7 @@ def lean_type(shape: Analysis.TypeShape, where: String) -> Result[String]
     "Void" -> ok("Unit")
     "Result" -> ok("Result #{wrap(try lean_type(shape.args[0], where))}")
     "Optional" -> ok("Option #{wrap(try lean_type(shape.args[0], where))}")
+    "List" -> ok("List #{wrap(try lean_type(shape.args[0], where))}")
     _ -> error("#{where}: the type #{shape.name} is a later step")
   end
 end
@@ -296,7 +305,7 @@ def statement(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.No
     "try" -> try_statement(functions, gen, node)
     "return" -> return_statement(functions, gen, node, last)
     "if" -> if_statement(functions, gen, node.children)
-    "call", "op" ->
+    "call", "op", "neg" ->
       parts = try value(functions, gen, node)
       return error(refuse(node, "a pure value as a statement")) if !parts.halts
 
@@ -393,7 +402,7 @@ end
 
 # A call or an operator, not yet bound, or any other expression as a term.
 def value(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node) -> Result[Parts]
-  return parts(functions, gen, node, true) if node.kind == "call" or node.kind == "op"
+  return parts(functions, gen, node, true) if node.kind == "call" or node.kind == "op" or node.kind == "neg"
 
   term = try expr(functions, gen, node, true)
   ok(Parts(gen: term.gen, text: term.text, atom: term.atom, halts: false, hoisted: term.hoisted))
@@ -415,7 +424,7 @@ def expr(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, t
     "string" -> ok(Term(gen: gen, text: lean_string(node.text), atom: true, hoisted: false))
     "bool" -> ok(Term(gen: gen, text: node.text, atom: true, hoisted: false))
     "local" -> ok(Term(gen: gen, text: ident(node.text), atom: true, hoisted: false))
-    "call", "op" ->
+    "call", "op", "neg" ->
       p = try parts(functions, gen, node, top)
       if p.halts
         name = fresh(p.gen)
@@ -432,6 +441,9 @@ def expr(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, t
       t = try expr(functions, gen, node.children[0], false)
       ok(Term(gen: t.gen, text: "(!#{arg(t)})", atom: true, hoisted: t.hoisted))
     "interpolation" -> interpolation(functions, gen, node)
+    "list" ->
+      a = try arguments(functions, gen, node)
+      ok(Term(gen: a.gen, text: "[#{a.texts.join(", ")}]", atom: true, hoisted: a.hoisted))
     "try" ->
       name = fresh(gen)
       g = try match_try(functions, name.gen, node, "| .ok #{name.text} =>", true)
@@ -497,12 +509,7 @@ end
 
 # A call or an operator: its target, and its arguments as terms.
 def parts(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, top: Bool) -> Result[Parts]
-  if node.kind == "op"
-    known = node.children[0].type.name == "Int" and OPERATORS.key?(node.text)
-    return error(refuse(node, "the operator #{node.text} on #{node.children[0].type.name}")) if !known
-
-    return builtin_call(functions, gen, node, OPERATORS[node.text])
-  end
+  return operator(functions, gen, node) if node.kind == "neg" or node.kind == "op"
   case node.target
     "ok" -> result_call(functions, gen, node, top)
     "error" -> error_call(functions, gen, node, top)
@@ -516,6 +523,25 @@ def parts(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node, 
 
       builtin_call(functions, gen, node, BUILTINS[node.target])
   end
+end
+
+# A unary minus or a binary operator, by the type of its first operand.
+def operator(functions: Map[String, Analysis.Body], gen: Gen, node: Analysis.Node) -> Result[Parts]
+  operand = node.children[0].type.name
+  if node.kind == "neg"
+    return error(refuse(node, "unary minus on #{operand}")) if operand != "Int"
+
+    return builtin_call(functions, gen, node, NEG)
+  end
+  if node.kind == "op"
+    return builtin_call(functions, gen, node, BYTES_PLUS) if operand == "Bytes" and node.text == "+"
+
+    known = operand == "Int" and OPERATORS.key?(node.text)
+    return error(refuse(node, "the operator #{node.text} on #{operand}")) if !known
+
+    return builtin_call(functions, gen, node, OPERATORS[node.text])
+  end
+  error(refuse(node, "the expression #{node.kind}"))
 end
 
 # The arguments run in the order of the source; `children` has named ones in the order of the parameters.

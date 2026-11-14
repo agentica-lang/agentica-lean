@@ -16,6 +16,7 @@ import Agentica.Prelude.Result.Unwrap
 import Agentica.Prelude.RuntimeError
 import Agentica.Prelude.String.FromInt
 import Agentica.Std.Binary
+import Agentica.Std.Binary.Proofs.Frame
 import Agentica.Std.Binary.Proofs.Read8
 import Agentica.Std.Binary.Proofs.ReadFrameLength
 import Agentica.Std.Binary.Proofs.ReadSigned
@@ -26,6 +27,8 @@ import Agentica.Std.Binary.Proofs.ReadU32Be
 import Agentica.Std.Binary.Proofs.ReadU32Le
 import Agentica.Std.Binary.Proofs.ReadU64Be
 import Agentica.Std.Binary.Proofs.ReadU64Le
+import Agentica.Std.Binary.Proofs.RoundTrip
+import Agentica.Std.Binary.Proofs.Write
 
 /-!
 # Agentica in Lean

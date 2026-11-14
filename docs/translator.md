@@ -34,18 +34,19 @@ Checked against agentica 0.32.0-alpha.1 (`stdlib/analysis.agc`,
 The readers and their helpers (`window`, `load*`, `extend`, `unsigned64`)
 use:
 
-- `Int`: literals, `+` and `-` (they halt on overflow), `<` and `>`, `or`,
-  and `shift_left`, `shift_right`, `bit_or`;
-- `Bytes`: `data.size` (an alias of `Bytes.length`) and `data[i]` (it halts
-  outside the bytes);
-- `Result`: `ok`, `error` with a message and a kind, and `try` as a statement
-  and as an expression;
+- `Int`: literals, `+`, `-` and unary `-` (they halt on overflow), `<` and
+  `>`, `or`, and `shift_left`, `shift_right`, `bit_or`, `bit_and`;
+- `Bytes`: `data.size` (an alias of `Bytes.length`), `data[i]` (it halts
+  outside the bytes), `+` and `Bytes.from_list`;
+- `List[Int]`: list literals;
+- `Result`: `ok`, `error` with a message and a kind, `unwrap!`, and `try` as
+  a statement and as an expression;
 - a string interpolation of `String` and `Int`;
 - local bindings, `if`, `return`, and calls of private functions of the same
   file.
 
-The float readers need `Float.from_bits` and the writers need list literals
-(`pack`): later steps.
+The float readers and writers need `Float.from_bits` and `Float.to_bits`:
+a later step.
 
 ## Options
 
@@ -150,13 +151,13 @@ all of it.
   from `Analysis.bodies`; `lean_test.agc` is its tests (`agentica test
   translator`).
 - `Agentica/Std/Binary.lean`: generated from `std/binary`, with the integer
-  readers, `read_frame_length` and the helpers they call. Its header says
-  that it is generated. The writers and `frame` wait for list literals in
-  `Analysis.bodies` (on agentica master, in no release yet).
-  The source comes from the binary itself (`std/binary` without a buffer), so
-  pinning the binary pins the source.
+  readers and writers, `read_frame_length`, `frame` and the helpers they
+  call. Its header says that it is generated. The source comes from the
+  binary itself (`std/binary` without a buffer), so pinning the binary pins
+  the source.
 - `Agentica/Std/Binary/Proofs/`: the theorems about the generated code,
-  written by hand, one file per group of readers.
+  written by hand, one file per group of readers, then `Write.lean` (the
+  writers), `RoundTrip.lean` (each writer read back) and `Frame.lean`.
 - `agentica translator/main.agc` writes the files; `--check` translates
   again in memory and exits 1 naming each stale file. CI runs it with the
   pinned release.
