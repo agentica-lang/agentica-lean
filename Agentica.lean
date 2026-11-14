@@ -9,6 +9,7 @@ import Agentica.Design.ReadU32Be
 import Agentica.Design.ReadU32Le
 import Agentica.Design.ReadU64Be
 import Agentica.Design.ReadU64Le
+import Agentica.Design.Translated
 import Agentica.Prelude.Bytes
 import Agentica.Prelude.Int
 import Agentica.Prelude.Int.Arith
@@ -20,6 +21,7 @@ import Agentica.Prelude.Int.ShiftRightUnsigned
 import Agentica.Prelude.Result
 import Agentica.Prelude.RuntimeError
 import Agentica.Prelude.String.FromInt
+import Agentica.Std.Binary
 
 /-!
 # Agentica in Lean
