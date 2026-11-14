@@ -1,78 +1,15 @@
-import Agentica.Prelude.Bytes
-import Agentica.Prelude.Int.Arith
-import Agentica.Prelude.Int.Bits
-import Agentica.Prelude.Int.Compare
-import Agentica.Prelude.Int.ShiftLeft
-import Agentica.Prelude.Result
-import Agentica.Prelude.String.FromInt
+import Agentica.Std.Binary
 
 /-!
-# Design target: `read_u16_le` of `std/binary`, translated by hand
+# `read_u16_le`, and `window` for every reader
 
-This file is a **hand translation**. It shows the Lean that the translator of
-`docs/translator.md` must write for `window`, `load16_le` and `read_u16_le` of
-`stdlib/binary.agc` (agentica 0.31.1), and theorems about them. The tool must
-reproduce the three definitions; the file goes away when it does.
-
-Everything it calls comes from the prelude, by its full name
-(`Agentica.Bytes.at`), as the translator will write it (see
-`Agentica/Prelude/Bytes.lean`). The rule is for the translated definitions
-only: theorem statements and proofs are written by hand and use short names
+Theorems about `window`, `load16_le` and `read_u16_le` of
+`Agentica/Std/Binary.lean`, which `translator/` writes from `std/binary`. The
+statements and proofs are written by hand and use short names
 (`Bytes.length`), which the namespace resolves to the prelude.
 -/
 
-namespace Agentica.Design
-
-/-! ## The hand translation
-
-The source, from `stdlib/binary.agc`:
-
-```ruby
-def window(data: Bytes, offset: Int, n: Int, type: String) -> Result[Void]
-  if offset < 0 or offset > data.size - n
-    return error("#{type} at offset #{offset} is outside bytes of length #{data.size}", kind: "argument")
-  end
-  ok()
-end
-
-def load16_le(data: Bytes, offset: Int, type: String) -> Result[Int]
-  try window(data, offset, 2, type)
-  a = data[offset]
-  b = data[offset + 1]
-  ok(b.shift_left(8).bit_or(a))
-end
-
-def read_u16_le(data: Bytes, offset: Int) -> Result[Int] = load16_le(data, offset, "u16")
-```
-
-Each step that can halt is a `←`, in the order of the source. `or` does not
-evaluate its right side when the left is true, and `try` returns the error.
-`data.size` is the alias of `Bytes.length`: the translator writes the name the
-checker resolved.
--/
-
-def window (data : Bytes) (offset n : AInt) (type : String) : M (Result Unit) := do
-  let out ← if Agentica.AInt.lt offset (Agentica.AInt.ofInt 0) then pure true else do
-    let limit ← Agentica.AInt.sub (Agentica.Bytes.length data) n
-    pure (Agentica.AInt.gt offset limit)
-  if out then
-    return .error { kind := "argument", message := (
-      type ++ " at offset " ++ Agentica.String.from_int offset ++
-        " is outside bytes of length " ++ Agentica.String.from_int (Agentica.Bytes.length data)) }
-  return .ok ()
-
-def load16_le (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
-  match ← window data offset (Agentica.AInt.ofInt 2) type with
-  | .error e => return .error e
-  | .ok _ => pure ()
-  let a ← Agentica.Bytes.at data offset
-  let i ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
-  let b ← Agentica.Bytes.at data i
-  let s ← Agentica.AInt.shift_left b (Agentica.AInt.ofInt 8)
-  return .ok (Agentica.AInt.bit_or s a)
-
-def read_u16_le (data : Bytes) (offset : AInt) : M (Result AInt) :=
-  load16_le data offset "u16"
+namespace Agentica.Std.Binary
 
 /-! ## Lemmas about `window`, for every reader -/
 
@@ -218,4 +155,4 @@ example : read_u16_le Bytes.sample (AInt.ofInt 9223372036854775807) =
       "u16 at offset 9223372036854775807 is outside bytes of length 3") }) := by
   rfl
 
-end Agentica.Design
+end Agentica.Std.Binary

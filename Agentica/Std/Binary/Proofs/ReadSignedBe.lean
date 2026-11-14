@@ -1,42 +1,15 @@
-import Agentica.Design.ReadSigned
-import Agentica.Design.ReadU16Be
-import Agentica.Design.ReadU32Be
+import Agentica.Std.Binary.Proofs.ReadSigned
+import Agentica.Std.Binary.Proofs.ReadU16Be
+import Agentica.Std.Binary.Proofs.ReadU32Be
 
 /-!
-# Design target: the big-endian signed readers, translated by hand
+# The big-endian signed readers
 
-A hand translation of `read_i16_be` and `read_i32_be` of `stdlib/binary.agc`
-(agentica 0.31.1), with the rules of `ReadU16Le.lean`. `extend` is in
-`ReadSigned.lean`.
-
-```ruby
-def read_i16_be(data: Bytes, offset: Int) -> Result[Int]
-  value = try load16_be(data, offset, "i16")
-  ok(extend(value, 16))
-end
-
-def read_i32_be(data: Bytes, offset: Int) -> Result[Int]
-  value = try load32_be(data, offset, "i32")
-  ok(extend(value, 32))
-end
-```
+Theorems about `read_i16_be` and `read_i32_be` of `Agentica/Std/Binary.lean`.
+`extend` is in `ReadSigned.lean`.
 -/
 
-namespace Agentica.Design
-
-def read_i16_be (data : Bytes) (offset : AInt) : M (Result AInt) := do
-  match ← load16_be data offset "i16" with
-  | .error e => return .error e
-  | .ok value =>
-    let v ← extend value (Agentica.AInt.ofInt 16)
-    return .ok v
-
-def read_i32_be (data : Bytes) (offset : AInt) : M (Result AInt) := do
-  match ← load32_be data offset "i32" with
-  | .error e => return .error e
-  | .ok value =>
-    let v ← extend value (Agentica.AInt.ofInt 32)
-    return .ok v
+namespace Agentica.Std.Binary
 
 /-- In range, `read_i16_be` never halts and is the two's complement value of
 `v = 256 * b0 + b1`: `v` below `2^15`, else `v - 2^16`. -/
@@ -92,4 +65,4 @@ theorem read_i32_be_out_of_range (data : Bytes) (offset : AInt)
     (by omega)]
   rfl
 
-end Agentica.Design
+end Agentica.Std.Binary

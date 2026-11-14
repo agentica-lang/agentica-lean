@@ -2,9 +2,8 @@
 
 The plan of #3: translate pure Agentica functions to Lean and prove things
 about them. This page records the decisions. The first target is the
-little-endian readers of `stdlib/binary.agc`.
-`Agentica/Design/ReadU16Le.lean` is the target output, written by hand, with
-its theorems.
+integer readers of `stdlib/binary.agc`: `Agentica/Std/Binary.lean` is their
+translation, and `Agentica/Std/Binary/Proofs/` holds the theorems.
 
 ## What agentica gives today
 
@@ -90,7 +89,8 @@ What #1159 must give for step 1:
 
 ## The Lean shape
 
-`Agentica/Design/ReadU16Le.lean` shows all of it.
+`window`, `load16_le` and `read_u16_le` of `Agentica/Std/Binary.lean` show
+all of it.
 
 - **Types.** `Int` is `AInt` (a structure around `BitVec 64`, with no
   operators), `Bool` is `Bool`, `String` is `String`, `Bytes` is a structure
@@ -153,10 +153,8 @@ What #1159 must give for step 1:
   readers and the helpers they call. Its header says that it is generated.
   The source comes from the binary itself (`std/binary` without a buffer), so
   pinning the binary pins the source.
-- `Agentica/Design/Translated.lean`: the kernel checks by `rfl` that each
-  generated definition is the hand translation of `Agentica/Design/`. The
-  proofs move to the generated code in the next step, and the hand
-  translations go away.
+- `Agentica/Std/Binary/Proofs/`: the theorems about the generated code,
+  written by hand, one file per group of readers.
 - `agentica translator/main.agc` writes the files; `--check` translates
   again in memory and exits 1 naming each stale file. CI runs it with the
   pinned release.

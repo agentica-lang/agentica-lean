@@ -1,50 +1,15 @@
-import Agentica.Design.ReadU32Le
+import Agentica.Std.Binary.Proofs.ReadU32Le
 import Agentica.Prelude.Int.ShiftRight
 
 /-!
-# Design target: the signed readers, translated by hand
+# The little-endian signed readers
 
-A hand translation of `extend`, `read_i16_le` and `read_i32_le` of
-`stdlib/binary.agc` (agentica 0.31.1), with the rules of `ReadU16Le.lean`.
-`extend` moves the sign bit of a `bits`-bit value to bit 63 and back with an
-arithmetic shift.
-
-```ruby
-def extend(value: Int, bits: Int) -> Int = value.shift_left(64 - bits).shift_right(64 - bits)
-
-def read_i16_le(data: Bytes, offset: Int) -> Result[Int]
-  value = try load16_le(data, offset, "i16")
-  ok(extend(value, 16))
-end
-
-def read_i32_le(data: Bytes, offset: Int) -> Result[Int]
-  value = try load32_le(data, offset, "i32")
-  ok(extend(value, 32))
-end
-```
+Theorems about `extend`, `read_i16_le` and `read_i32_le` of
+`Agentica/Std/Binary.lean`. `extend` moves the sign bit of a `bits`-bit value
+to bit 63 and back with an arithmetic shift.
 -/
 
-namespace Agentica.Design
-
-def extend (value bits : AInt) : M AInt := do
-  let k1 ← Agentica.AInt.sub (Agentica.AInt.ofInt 64) bits
-  let s ← Agentica.AInt.shift_left value k1
-  let k2 ← Agentica.AInt.sub (Agentica.AInt.ofInt 64) bits
-  Agentica.AInt.shift_right s k2
-
-def read_i16_le (data : Bytes) (offset : AInt) : M (Result AInt) := do
-  match ← load16_le data offset "i16" with
-  | .error e => return .error e
-  | .ok value =>
-    let v ← extend value (Agentica.AInt.ofInt 16)
-    return .ok v
-
-def read_i32_le (data : Bytes) (offset : AInt) : M (Result AInt) := do
-  match ← load32_le data offset "i32" with
-  | .error e => return .error e
-  | .ok value =>
-    let v ← extend value (Agentica.AInt.ofInt 32)
-    return .ok v
+namespace Agentica.Std.Binary
 
 /-- `extend v n` for `0 < n < 64` never halts: it shifts `v` left by `64 - n`
 and back, so the result is the signed 64-bit value of `v * 2^(64-n)`,
@@ -143,4 +108,4 @@ theorem read_i32_le_out_of_range (data : Bytes) (offset : AInt)
     (by omega)]
   rfl
 
-end Agentica.Design
+end Agentica.Std.Binary

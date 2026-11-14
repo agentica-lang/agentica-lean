@@ -1,15 +1,5 @@
 -- The imports of every module under Agentica/ go here, at the top of the file:
 -- an import below the module doc would not parse.
-import Agentica.Design.Read8
-import Agentica.Design.ReadSigned
-import Agentica.Design.ReadSignedBe
-import Agentica.Design.ReadU16Be
-import Agentica.Design.ReadU16Le
-import Agentica.Design.ReadU32Be
-import Agentica.Design.ReadU32Le
-import Agentica.Design.ReadU64Be
-import Agentica.Design.ReadU64Le
-import Agentica.Design.Translated
 import Agentica.Prelude.Bytes
 import Agentica.Prelude.Int
 import Agentica.Prelude.Int.Arith
@@ -22,6 +12,15 @@ import Agentica.Prelude.Result
 import Agentica.Prelude.RuntimeError
 import Agentica.Prelude.String.FromInt
 import Agentica.Std.Binary
+import Agentica.Std.Binary.Proofs.Read8
+import Agentica.Std.Binary.Proofs.ReadSigned
+import Agentica.Std.Binary.Proofs.ReadSignedBe
+import Agentica.Std.Binary.Proofs.ReadU16Be
+import Agentica.Std.Binary.Proofs.ReadU16Le
+import Agentica.Std.Binary.Proofs.ReadU32Be
+import Agentica.Std.Binary.Proofs.ReadU32Le
+import Agentica.Std.Binary.Proofs.ReadU64Be
+import Agentica.Std.Binary.Proofs.ReadU64Le
 
 /-!
 # Agentica in Lean

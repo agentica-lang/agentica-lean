@@ -1,92 +1,13 @@
-import Agentica.Design.ReadU32Le
+import Agentica.Std.Binary.Proofs.ReadU32Le
 
 /-!
-# Design target: `read_u64_le` and `read_i64_le`, translated by hand
+# `read_u64_le` and `read_i64_le`
 
-A hand translation of `load64_le`, `unsigned64`, `read_u64_le` and
-`read_i64_le` of `stdlib/binary.agc` (agentica 0.31.1), with the rules of
-`ReadU16Le.lean`. `try e` followed by more code is a `match` whose `ok` arm
-holds the rest.
-
-```ruby
-def load64_le(data: Bytes, offset: Int, type: String) -> Result[Int]
-  try window(data, offset, 8, type)
-  a = data[offset]
-  b = data[offset + 1]
-  c = data[offset + 2]
-  d = data[offset + 3]
-  e = data[offset + 4]
-  f = data[offset + 5]
-  g = data[offset + 6]
-  h = data[offset + 7]
-  low = d.shift_left(24).bit_or(c.shift_left(16)).bit_or(b.shift_left(8)).bit_or(a)
-  high = h.shift_left(24).bit_or(g.shift_left(16)).bit_or(f.shift_left(8)).bit_or(e)
-  ok(high.shift_left(32).bit_or(low))
-end
-
-def unsigned64(value: Int, offset: Int) -> Result[Int]
-  return error("u64 at offset #{offset} does not fit in Int", kind: "number.range") if value < 0
-  ok(value)
-end
-
-def read_u64_le(data: Bytes, offset: Int) -> Result[Int]
-  value = try load64_le(data, offset, "u64")
-  unsigned64(value, offset)
-end
-
-def read_i64_le(data: Bytes, offset: Int) -> Result[Int] = load64_le(data, offset, "i64")
-```
+Theorems about `load64_le`, `unsigned64`, `read_u64_le` and `read_i64_le` of
+`Agentica/Std/Binary.lean`.
 -/
 
-namespace Agentica.Design
-
-def load64_le (data : Bytes) (offset : AInt) (type : String) : M (Result AInt) := do
-  match ← window data offset (Agentica.AInt.ofInt 8) type with
-  | .error e => return .error e
-  | .ok _ => pure ()
-  let a ← Agentica.Bytes.at data offset
-  let i1 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 1)
-  let b ← Agentica.Bytes.at data i1
-  let i2 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 2)
-  let c ← Agentica.Bytes.at data i2
-  let i3 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 3)
-  let d ← Agentica.Bytes.at data i3
-  let i4 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 4)
-  let e ← Agentica.Bytes.at data i4
-  let i5 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 5)
-  let f ← Agentica.Bytes.at data i5
-  let i6 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 6)
-  let g ← Agentica.Bytes.at data i6
-  let i7 ← Agentica.AInt.add offset (Agentica.AInt.ofInt 7)
-  let h ← Agentica.Bytes.at data i7
-  let s1 ← Agentica.AInt.shift_left d (Agentica.AInt.ofInt 24)
-  let s2 ← Agentica.AInt.shift_left c (Agentica.AInt.ofInt 16)
-  let o1 := Agentica.AInt.bit_or s1 s2
-  let s3 ← Agentica.AInt.shift_left b (Agentica.AInt.ofInt 8)
-  let o2 := Agentica.AInt.bit_or o1 s3
-  let low := Agentica.AInt.bit_or o2 a
-  let t1 ← Agentica.AInt.shift_left h (Agentica.AInt.ofInt 24)
-  let t2 ← Agentica.AInt.shift_left g (Agentica.AInt.ofInt 16)
-  let p1 := Agentica.AInt.bit_or t1 t2
-  let t3 ← Agentica.AInt.shift_left f (Agentica.AInt.ofInt 8)
-  let p2 := Agentica.AInt.bit_or p1 t3
-  let high := Agentica.AInt.bit_or p2 e
-  let u ← Agentica.AInt.shift_left high (Agentica.AInt.ofInt 32)
-  return .ok (Agentica.AInt.bit_or u low)
-
-def unsigned64 (value offset : AInt) : M (Result AInt) := do
-  if Agentica.AInt.lt value (Agentica.AInt.ofInt 0) then
-    return .error { kind := "number.range", message := (
-      "u64 at offset " ++ Agentica.String.from_int offset ++ " does not fit in Int") }
-  return .ok value
-
-def read_u64_le (data : Bytes) (offset : AInt) : M (Result AInt) := do
-  match ← load64_le data offset "u64" with
-  | .error e => return .error e
-  | .ok value => unsigned64 value offset
-
-def read_i64_le (data : Bytes) (offset : AInt) : M (Result AInt) :=
-  load64_le data offset "i64"
+namespace Agentica.Std.Binary
 
 /-! ## Theorems -/
 
@@ -243,4 +164,4 @@ theorem read_i64_le_out_of_range (data : Bytes) (offset : AInt)
     (by omega)]
   rfl
 
-end Agentica.Design
+end Agentica.Std.Binary
