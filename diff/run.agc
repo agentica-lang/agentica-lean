@@ -165,7 +165,7 @@ def arity(name: String) -> Int
 end
 
 def takes_bytes(name: String) -> Bool
-  return name == "length" or name == "at" or name.starts_with?("read_")
+  return name == "length" or name == "at" or name.start_with?("read_")
 end
 
 # The bytes of a comma list (`-` for none), or an error.

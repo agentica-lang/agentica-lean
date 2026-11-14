@@ -10,7 +10,7 @@ The plan is in issue #3, and the design in [docs/translator.md](docs/translator.
 - **A Lean prelude** that models the Agentica types and builtins the translated code calls. An `Int` is 64 bits, as in the VM, and a runtime error is its diagnostic code (`RUNTIME-...`), never its message. Each builtin in the prelude comes with theorems about it; the first one is `Int.shift_right_unsigned` (`Agentica/Prelude/Int/ShiftRightUnsigned.lean`).
 - **Proofs** about the translated functions, beside them, checked by the Lean kernel. The first target is the little-endian readers of `std/binary`: the shifts and ORs equal `b0 + 256*b1 + ...`.
 
-**Status (November 2026): paused.** Done today: the prelude for `Int`, `Bytes` and `Result`, and hand translations with proofs of every integer reader of `std/binary` (`read_u8`/`read_i8` and the 16-, 32- and 64-bit readers, big- and little-endian). The differential test runs them and the prelude against agentica 0.27.0. The translator is not started: it waits on [agentica#1159](https://github.com/agentica-lang/agentica/issues/1159). Work on this repo is paused.
+**Status (November 2026): paused.** Done today: the prelude for `Int`, `Bytes` and `Result`, and hand translations with proofs of every integer reader of `std/binary` (`read_u8`/`read_i8` and the 16-, 32- and 64-bit readers, big- and little-endian). The differential test runs them and the prelude against agentica 0.31.1. The translator is not started: it waits on [agentica#1159](https://github.com/agentica-lang/agentica/issues/1159). Work on this repo is paused.
 
 ## What is trusted
 
@@ -46,7 +46,7 @@ AGENTICA=/path/to/agentica python3 scripts/difftest.py
 
 `lake exe diffcases` prints the cases with the results of the Lean prelude: the edges of every function and random cases from a fixed seed. `diff/run.agc` runs the same cases on the `agentica` binary, and the script compares the values and the diagnostic codes (and the text of a `Result` error, which is a value). A failing case prints its arguments, the Lean result and the VM result. The script also fails when its own run cannot be trusted: no cases, a function without its cases, a case the harness cannot read, or a halt outside the builtin under test. `--self-test` plants each of these and checks that it fails; CI runs it. Without a binary the script skips.
 
-The prelude is checked against **agentica 0.27.0**: CI installs that release and checks its SHA-256. To move to a new release, change the version and the `linux-x86_64` SHA-256 (from the release's `SHA256SUMS`) in `.github/workflows/ci.yml`, run the test, and read the release notes for changed builtins. A difference is a change of the VM: fix the prelude function, its doc comment and its theorems to match, or report it to agentica if it is a bug there.
+The prelude is checked against **agentica 0.31.1**: CI installs that release and checks its SHA-256. To move to a new release, change the version and the `linux-x86_64` SHA-256 (from the release's `SHA256SUMS`) in `.github/workflows/ci.yml`, run the test, and read the release notes for changed builtins. A difference is a change of the VM: fix the prelude function, its doc comment and its theorems to match, or report it to agentica if it is a bug there.
 
 ## License
 
