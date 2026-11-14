@@ -76,7 +76,8 @@ theorem firstNonByte_some (k : Nat) (items : List AInt) (j : Nat) (hj : j < item
 /-- When every item is a byte (and the list is below the size bound),
 `Bytes.from_list` is `ok` of those bytes. -/
 theorem from_list_ok (items : List AInt)
-    (h : ∀ x ∈ items, 0 ≤ x.bits.toInt ∧ x.bits.toInt ≤ 255) (hl : items.length < 2 ^ 63) :
+    (h : ∀ x ∈ items, 0 ≤ x.bits.toInt ∧ x.bits.toInt ≤ 255)
+    (hl : items.length < 2 ^ 63) :
     Bytes.from_list items =
       .ok ⟨(items.map fun x => x.bits.toNat.toUInt8).toArray, by simpa using hl⟩ := by
   simp only [Bytes.from_list, (firstNonByte_none_iff 0 items).mpr h, hl, ↓reduceDIte]
