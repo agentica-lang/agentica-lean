@@ -53,27 +53,19 @@ theorem and_255 (v : AInt) :
   have : (AInt.ofInt 255).bits.toNat = 2 ^ 8 - 1 := rfl
   rw [this, Nat.and_two_pow_sub_one_eq_mod]
 
-/-- A list whose items are all below 256 has no item outside 0 to 255. -/
-theorem firstNonByte_none (k : Nat) (items : List AInt)
-    (h : ∀ x ∈ items, x.bits.toNat < 256) : Bytes.firstNonByte k items = none := by
-  induction items generalizing k with
-  | nil => rfl
-  | cons x rest ih =>
-    have hx := h x (List.mem_cons_self ..)
-    have := AInt.toInt_ofNat_of_lt (n := x.bits.toNat) (by omega)
-    rw [BitVec.ofNat_toNat, BitVec.setWidth_eq] at this
-    have hc : ¬ (x.bits.toInt < 0 ∨ 255 < x.bits.toInt) := by omega
-    simp only [Bytes.firstNonByte, hc, ↓reduceIte]
-    exact ih (k + 1) fun y hy => h y (List.mem_cons_of_mem _ hy)
-
 /-- `pack` of items below 256 never halts and is their bytes. -/
 theorem pack_eq (items : List AInt) (h : ∀ x ∈ items, x.bits.toNat < 256)
     (hl : items.length < 2 ^ 63) :
     pack items =
       pure ⟨(items.map fun x => x.bits.toNat.toUInt8).toArray, by simpa using hl⟩ := by
-  simp only [pack, Bytes.from_list, firstNonByte_none 0 items h, hl, ↓reduceDIte]
+  have hb : ∀ x ∈ items, 0 ≤ x.bits.toInt ∧ x.bits.toInt ≤ 255 := by
+    intro x hx
+    have := h x hx
+    have := AInt.toInt_ofNat_of_lt (n := x.bits.toNat) (by omega)
+    rw [BitVec.ofNat_toNat, BitVec.setWidth_eq] at this
+    omega
+  rw [pack, Bytes.from_list_ok items hb hl]
   rfl
-
 
 /-- `bytes2_le` never halts and is the low 2 bytes of the 64 bits of `v`,
 little-endian. -/
