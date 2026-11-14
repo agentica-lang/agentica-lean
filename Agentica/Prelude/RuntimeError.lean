@@ -22,6 +22,8 @@ inductive RuntimeError where
   | integerOverflow
   /-- An index outside a collection, for example `b[i]` outside the bytes. -/
   | indexOutOfRange
+  /-- `r.unwrap!` on an error (`vm/builtins.c`, `builtin_result_unwrap`). -/
+  | unwrapError
   deriving DecidableEq, Repr
 
 /-- The diagnostic code, as the VM reports it. -/
@@ -29,6 +31,7 @@ def RuntimeError.code : RuntimeError → String
   | .invalidCount => "RUNTIME-INVALID-COUNT"
   | .integerOverflow => "RUNTIME-INTEGER-OVERFLOW"
   | .indexOutOfRange => "RUNTIME-INDEX-OUT-OF-RANGE"
+  | .unwrapError => "RUNTIME-UNWRAP-ERROR"
 
 /-- Code that can halt: translated functions and the builtins that can fail. -/
 abbrev M := Except RuntimeError

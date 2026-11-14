@@ -46,6 +46,19 @@ def showResult (r : M (Result AInt)) : String :=
 def showBytes (b : List UInt8) : String :=
   if b.isEmpty then "-" else ",".intercalate (b.map (toString ·.toNat))
 
+def showInts (xs : List Int) : String :=
+  if xs.isEmpty then "-" else ",".intercalate (xs.map toString)
+
+def showBytesResult (r : Result Bytes) : String :=
+  match r with
+  | .ok b => s!"ok {showBytes b.data.toList}"
+  | .error e => s!"error {e.kind} {e.message}"
+
+def showUnwrap (r : M Bytes) : String :=
+  match r with
+  | .ok b => s!"bytes {showBytes b.data.toList}"
+  | .error e => s!"halt {e.code}"
+
 def toBytes (b : List UInt8) : Bytes :=
   if h : b.toArray.size < 2 ^ 63 then ⟨b.toArray, h⟩ else ⟨#[], by decide⟩
 
@@ -81,6 +94,18 @@ def randomIn (s : UInt64) (lo : Int) (span : Nat) : Int × UInt64 :=
   let (a, s) := next s
   (lo + (a.toNat % span), s)
 
+/-- Up to 8 Ints, most of them bytes, some just outside, a few anything. -/
+def randomInts (s : UInt64) : List Int × UInt64 := Id.run do
+  let (n, s0) := next s
+  let mut s := s0
+  let mut out : List Int := []
+  for _ in [0:(n.toNat % 9)] do
+    let (k, s1) := next s
+    let (x, s2) := if k % 16 == 0 then randomInt s1 else randomIn s1 (-2) 260
+    s := s2
+    out := out ++ [x]
+  return (out, s)
+
 def randomBytes (s : UInt64) : List UInt8 × UInt64 := Id.run do
   let (n, s0) := next s
   let mut s := s0
@@ -114,8 +139,20 @@ def pureCases (fn : String) (f : AInt → AInt → AInt) (a b : Int) : Case :=
 def compareCase (fn : String) (f : AInt → AInt → Bool) (a b : Int) : Case :=
   binaryCase fn a b s!"bool {f (AInt.ofInt a) (AInt.ofInt b)}"
 
+/-- `Bytes.from_list` and `unwrap!` of it on a list of Ints. -/
+def listCases (xs : List Int) : List Case :=
+  let items := xs.map AInt.ofInt
+  [{ fn := "from_list", args := [showInts xs], expected := showBytesResult (Bytes.from_list items) },
+   { fn := "unwrap", args := [showInts xs],
+     expected := showUnwrap (Result.unwrap! (Bytes.from_list items)) }]
+
+def plusCase (a b : List UInt8) : Case :=
+  { fn := "plus", args := [showBytes a, showBytes b],
+    expected := s!"bytes {showBytes (Bytes.plus (toBytes a) (toBytes b)).data.toList}" }
+
 def unaryCases (a : Int) : List Case :=
-  [{ fn := "bit_not", args := [toString a],
+  [{ fn := "neg", args := [toString a], expected := showM (AInt.neg (AInt.ofInt a)) },
+   { fn := "bit_not", args := [toString a],
      expected := s!"int {showInt (AInt.bit_not (AInt.ofInt a))}" },
    { fn := "from_int", args := [toString a],
      expected := s!"text {String.from_int (AInt.ofInt a)}" }]
@@ -175,6 +212,13 @@ def fixedCases : List Case := Id.run do
       [127, 255], [128, 0], [127, 255, 255, 255], [128, 0, 0, 0], [127, 0, 0, 0, 0, 0, 0, 0],
       [128, 0, 0, 0, 0, 0, 0, 0]] do
     out := out ++ bytesCases b 0
+  -- Lists of Ints: empty, the byte edges, an item outside at each place.
+  for xs in [[], [0], [255], [256], [-1], [0, 255], [1, 2, 3], [1, 256, -1], [1, 2, -1],
+      [intMax], [intMin], [255, 255, 255, 255, 255, 255, 255, 255], [0, 0, 300]] do
+    out := out ++ listCases xs
+  for a in [[], [1], [1, 2, 255]] do
+    for b in [[], [0], [128, 255]] do
+      out := out ++ [plusCase a b]
   return out
 
 /-- Random cases from a fixed seed: `perFunction` for each function. -/
@@ -187,7 +231,10 @@ def randomCases (seed : UInt64) (perFunction : Nat) : List Case := Id.run do
     let (n, s3) := randomIn s2 (-3) 72
     let (bytes, s4) := randomBytes s3
     let (i, s5) := randomIn s4 (-2) (bytes.length + 4)
-    s := s5
+    let (xs, s6) := randomInts s5
+    let (more, s7) := randomBytes s6
+    s := s7
+    out := out ++ listCases xs ++ [plusCase bytes more]
     for (fn, f) in binaryInt do
       out := out ++ [intCases fn f a (if fn.startsWith "shift" then n else b)]
     for (fn, f) in binaryPure do

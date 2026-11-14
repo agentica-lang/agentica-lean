@@ -76,6 +76,26 @@ def call_ge(a: Int, b: Int) -> String
   return "bool #{a >= b}"
 end
 
+def call_neg(a: Int) -> String
+  return "int #{-a}"
+end
+
+def call_from_list(items: List[Int]) -> String
+  found = Bytes.from_list(items)
+  if found.ok?
+    return "ok #{bytes_text(found.unwrap!)}"
+  end
+  return "error #{error_text(found)}"
+end
+
+def call_unwrap(items: List[Int]) -> String
+  return "bytes #{bytes_text(Bytes.from_list(items).unwrap!)}"
+end
+
+def call_plus(a: Bytes, b: Bytes) -> String
+  return "bytes #{bytes_text(a + b)}"
+end
+
 def call_length(data: Bytes) -> String
   return "int #{data.size}"
 end
@@ -144,6 +164,60 @@ def call_read_frame_length(data: Bytes, offset: Int, max: Int) -> String
   return result_text(Binary.read_frame_length(data, offset, max))
 end
 
+# Bytes as a comma list, `-` for none. It never halts.
+def bytes_text(data: Bytes) -> String
+  if data.size == 0
+    return "-"
+  end
+  return data.to_a.map { |b| b.to_s }.join(",")
+end
+
+# `KIND MESSAGE` of a failed Result of Bytes. It never halts.
+def error_text(found: Result[Bytes]) -> String
+  case found
+    ok(_) -> return ""
+    error(e) -> return "#{e.kind} #{e.message}"
+  end
+end
+
+# The Ints of a comma list (`-` for none), or an error.
+def parse_ints(text: String) -> Result[List[Int]]
+  items: List[Int] = []
+  if text == "-"
+    return ok(items)
+  end
+  for part in text.split(",")
+    items = items.push(try part.to_i)
+  end
+  return ok(items)
+end
+
+# The cases whose arguments are not all Int: a list of Ints, or two Bytes.
+def run_list_case(name: String, args: List[String]) -> String
+  if name == "plus"
+    if args.size != 2
+      return "harness bad case: plus with #{args.size} arguments"
+    end
+    a = parse_bytes(args[0])
+    b = parse_bytes(args[1])
+    if not a.ok? or not b.ok?
+      return "harness bad bytes: #{args[0]} #{args[1]}"
+    end
+    return call_plus(a.unwrap!, b.unwrap!)
+  end
+  if args.size != 1
+    return "harness bad case: #{name} with #{args.size} arguments"
+  end
+  items = parse_ints(args[0])
+  if not items.ok?
+    return "harness bad Ints: #{args[0]}"
+  end
+  if name == "from_list"
+    return call_from_list(items.unwrap!)
+  end
+  return call_unwrap(items.unwrap!)
+end
+
 # The text of a reader's Result. It never halts.
 def result_text(found: Result[Int]) -> String
   case found
@@ -155,7 +229,7 @@ end
 # The number of arguments of each function, the first one a Bytes for the
 # readers, `length` and `at`; -1 for a name the harness does not know.
 def arity(name: String) -> Int
-  if name == "bit_not" or name == "from_int" or name == "length"
+  if name == "bit_not" or name == "from_int" or name == "length" or name == "neg"
     return 1
   end
   two = ["add", "sub", "bit_and", "bit_or", "bit_xor", "shift_left", "shift_right",
@@ -190,6 +264,9 @@ end
 # Checks and parses a case, then calls its builtin. Only the `call_` functions
 # may halt.
 def run_case(name: String, args: List[String]) -> String
+  if name == "from_list" or name == "unwrap" or name == "plus"
+    return run_list_case(name, args)
+  end
   if arity(name) < 0 or args.size != arity(name)
     return "harness bad case: #{name} with #{args.size} arguments"
   end
@@ -247,6 +324,8 @@ def run_case(name: String, args: List[String]) -> String
     return call_read_frame_length(data, ints[0], ints[1])
   elsif name == "bit_not"
     return call_bit_not(ints[0])
+  elsif name == "neg"
+    return call_neg(ints[0])
   elsif name == "from_int"
     return call_from_int(ints[0])
   end
