@@ -8,21 +8,23 @@ its theorems.
 
 ## What agentica gives today
 
-Checked against agentica 0.27.0 and `main` (`stdlib/analysis.agc`,
+Checked against agentica 0.31.1 (`stdlib/analysis.agc`,
 `site/content/library/analysis.md`, the query commands of the CLI).
 
 - `std/analysis` answers `check`, `outline` (declarations and signatures),
   `type_at`, `symbol`, `refs` and `native_modules`. The CLI has the same
   queries: `outline`, `type-at`, `symbol`, `refs`.
-- None of them gives a function body. There is no typed tree and no dump of
-  the AST.
+- Since 0.28.0 it also has `bodies` (and `bodies_json`), the first PR of
+  agentica#1159: the functions of a file with their bodies as a typed tree.
+  It is experimental, its shape may change between releases, and it has no
+  CLI form. The other PRs of #1159 wait while this repo is paused.
 - Inside the compiler, the checker keeps no typed tree either. `Checked`
   (`compiler/check/checker.agc`) is a set of side tables over the untyped
   AST: the type of each node by id, what each method call or field resolved
-  to, and the prelude function each call of a prelude builtin runs. So the
-  "checker's own typed tree" that #1159 wants to share does not exist yet:
-  #1159 builds it from the AST and these tables.
-- agentica#1159 (milestone 0.29.0; the owner's comment puts it after 0.30.0)
+  to, and the prelude function each call of a prelude builtin runs.
+  `bodies` (`compiler/analysis/bodies.agc`) builds its typed tree from the
+  AST and these tables.
+- agentica#1159 (open, milestone 0.32.0)
   asks for `Analysis.bodies(session, path)` and its JSON form: the functions
   of a file with resolved types, the body as a typed tree with resolved call
   targets, whether each function is pure (with the reason when not), struct
