@@ -137,8 +137,12 @@ def bytesCases (b : List UInt8) (i : Int) : List Case :=
      expected := showM (Bytes.at bytes (AInt.ofInt i)) },
    { fn := "read_u16_le", args := [showBytes b, toString i],
      expected := showResult (Std.Binary.read_u16_le bytes (AInt.ofInt i)) }] ++
-  readers.map fun (fn, f) =>
-    { fn, args := [showBytes b, toString i], expected := showResult (f bytes (AInt.ofInt i)) }
+  readers.map (fun (fn, f) =>
+    { fn, args := [showBytes b, toString i], expected := showResult (f bytes (AInt.ofInt i)) }) ++
+  -- A frame limit below, at and above the length, and the edges.
+  [-1, 0, 1, 258, 33554432, 4294967295, intMax, intMin].map fun m =>
+    { fn := "read_frame_length", args := [showBytes b, toString i, toString m],
+      expected := showResult (Std.Binary.read_frame_length bytes (AInt.ofInt i) (AInt.ofInt m)) }
 
 /-- The fixed cases: the edges of every function. -/
 def fixedCases : List Case := Id.run do

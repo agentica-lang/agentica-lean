@@ -150,7 +150,9 @@ all of it.
   from `Analysis.bodies`; `lean_test.agc` is its tests (`agentica test
   translator`).
 - `Agentica/Std/Binary.lean`: generated from `std/binary`, with the integer
-  readers and the helpers they call. Its header says that it is generated.
+  readers, `read_frame_length` and the helpers they call. Its header says
+  that it is generated. The writers and `frame` wait for list literals in
+  `Analysis.bodies` (on agentica master, in no release yet).
   The source comes from the binary itself (`std/binary` without a buffer), so
   pinning the binary pins the source.
 - `Agentica/Std/Binary/Proofs/`: the theorems about the generated code,
