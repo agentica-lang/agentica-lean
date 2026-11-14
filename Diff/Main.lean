@@ -146,6 +146,34 @@ def listCases (xs : List Int) : List Case :=
    { fn := "unwrap", args := [showInts xs],
      expected := showUnwrap (Result.unwrap! (Bytes.from_list items)) }]
 
+/-- The writers of `std/binary` that check their range. -/
+def writers : List (String × (AInt → M (Result Bytes))) :=
+  [("write_u8", Std.Binary.write_u8),
+   ("write_i8", Std.Binary.write_i8),
+   ("write_u16_be", Std.Binary.write_u16_be),
+   ("write_u16_le", Std.Binary.write_u16_le),
+   ("write_i16_be", Std.Binary.write_i16_be),
+   ("write_i16_le", Std.Binary.write_i16_le),
+   ("write_u32_be", Std.Binary.write_u32_be),
+   ("write_u32_le", Std.Binary.write_u32_le),
+   ("write_i32_be", Std.Binary.write_i32_be),
+   ("write_i32_le", Std.Binary.write_i32_le),
+   ("write_u64_be", Std.Binary.write_u64_be),
+   ("write_u64_le", Std.Binary.write_u64_le)]
+
+def showBytesM (r : M (Result Bytes)) : String :=
+  match r with
+  | .ok r => showBytesResult r
+  | .error e => s!"halt {e.code}"
+
+def writerCases (a : Int) : List Case :=
+  (writers.map fun (fn, f) => { fn, args := [toString a], expected := showBytesM (f (AInt.ofInt a)) }) ++
+  [("write_i64_be", Std.Binary.write_i64_be), ("write_i64_le", Std.Binary.write_i64_le)].map fun (fn, f) =>
+    { fn, args := [toString a], expected := showUnwrap (f (AInt.ofInt a)) }
+
+def frameCase (b : List UInt8) : Case :=
+  { fn := "frame", args := [showBytes b], expected := showBytesM (Std.Binary.frame (toBytes b)) }
+
 def plusCase (a b : List UInt8) : Case :=
   { fn := "plus", args := [showBytes a, showBytes b],
     expected := s!"bytes {showBytes (Bytes.plus (toBytes a) (toBytes b)).data.toList}" }
@@ -216,6 +244,13 @@ def fixedCases : List Case := Id.run do
   for xs in [[], [0], [255], [256], [-1], [0, 255], [1, 2, 3], [1, 256, -1], [1, 2, -1],
       [intMax], [intMin], [255, 255, 255, 255, 255, 255, 255, 255], [0, 0, 300]] do
     out := out ++ listCases xs
+  -- Each range edge of the writers, and one past it.
+  for a in [0, -1, 127, 128, -128, -129, 255, 256, 32767, 32768, -32768, -32769, 65535, 65536,
+      2147483647, 2147483648, -2147483648, -2147483649, 4294967295, 4294967296, intMax, intMin,
+      258, -258, 16909060, 72623859790382856] do
+    out := out ++ writerCases a
+  for b in [[], [1], [1, 2, 255], List.replicate 300 7] do
+    out := out ++ [frameCase b]
   for a in [[], [1], [1, 2, 255]] do
     for b in [[], [0], [128, 255]] do
       out := out ++ [plusCase a b]
@@ -234,7 +269,7 @@ def randomCases (seed : UInt64) (perFunction : Nat) : List Case := Id.run do
     let (xs, s6) := randomInts s5
     let (more, s7) := randomBytes s6
     s := s7
-    out := out ++ listCases xs ++ [plusCase bytes more]
+    out := out ++ listCases xs ++ [plusCase bytes more, frameCase more] ++ writerCases a
     for (fn, f) in binaryInt do
       out := out ++ [intCases fn f a (if fn.startsWith "shift" then n else b)]
     for (fn, f) in binaryPure do

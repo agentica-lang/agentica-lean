@@ -96,6 +96,66 @@ def call_plus(a: Bytes, b: Bytes) -> String
   return "bytes #{bytes_text(a + b)}"
 end
 
+def call_write_u8(value: Int) -> String
+  return result_bytes_text(Binary.write_u8(value))
+end
+
+def call_write_i8(value: Int) -> String
+  return result_bytes_text(Binary.write_i8(value))
+end
+
+def call_write_u16_be(value: Int) -> String
+  return result_bytes_text(Binary.write_u16_be(value))
+end
+
+def call_write_u16_le(value: Int) -> String
+  return result_bytes_text(Binary.write_u16_le(value))
+end
+
+def call_write_i16_be(value: Int) -> String
+  return result_bytes_text(Binary.write_i16_be(value))
+end
+
+def call_write_i16_le(value: Int) -> String
+  return result_bytes_text(Binary.write_i16_le(value))
+end
+
+def call_write_u32_be(value: Int) -> String
+  return result_bytes_text(Binary.write_u32_be(value))
+end
+
+def call_write_u32_le(value: Int) -> String
+  return result_bytes_text(Binary.write_u32_le(value))
+end
+
+def call_write_i32_be(value: Int) -> String
+  return result_bytes_text(Binary.write_i32_be(value))
+end
+
+def call_write_i32_le(value: Int) -> String
+  return result_bytes_text(Binary.write_i32_le(value))
+end
+
+def call_write_u64_be(value: Int) -> String
+  return result_bytes_text(Binary.write_u64_be(value))
+end
+
+def call_write_u64_le(value: Int) -> String
+  return result_bytes_text(Binary.write_u64_le(value))
+end
+
+def call_write_i64_be(value: Int) -> String
+  return "bytes #{bytes_text(Binary.write_i64_be(value))}"
+end
+
+def call_write_i64_le(value: Int) -> String
+  return "bytes #{bytes_text(Binary.write_i64_le(value))}"
+end
+
+def call_frame(payload: Bytes) -> String
+  return result_bytes_text(Binary.frame(payload))
+end
+
 def call_length(data: Bytes) -> String
   return "int #{data.size}"
 end
@@ -172,6 +232,14 @@ def bytes_text(data: Bytes) -> String
   return data.to_a.map { |b| b.to_s }.join(",")
 end
 
+# `ok BYTES` or `error KIND MESSAGE`. It never halts.
+def result_bytes_text(found: Result[Bytes]) -> String
+  case found
+    ok(data) -> return "ok #{bytes_text(data)}"
+    error(e) -> return "error #{e.kind} #{e.message}"
+  end
+end
+
 # `KIND MESSAGE` of a failed Result of Bytes. It never halts.
 def error_text(found: Result[Bytes]) -> String
   case found
@@ -229,7 +297,8 @@ end
 # The number of arguments of each function, the first one a Bytes for the
 # readers, `length` and `at`; -1 for a name the harness does not know.
 def arity(name: String) -> Int
-  if name == "bit_not" or name == "from_int" or name == "length" or name == "neg"
+  one = name == "bit_not" or name == "from_int" or name == "length" or name == "neg" or name == "frame"
+  if one or name.start_with?("write_")
     return 1
   end
   two = ["add", "sub", "bit_and", "bit_or", "bit_xor", "shift_left", "shift_right",
@@ -246,7 +315,7 @@ def arity(name: String) -> Int
 end
 
 def takes_bytes(name: String) -> Bool
-  return name == "length" or name == "at" or name.start_with?("read_")
+  return name == "length" or name == "at" or name == "frame" or name.start_with?("read_")
 end
 
 # The bytes of a comma list (`-` for none), or an error.
@@ -326,6 +395,36 @@ def run_case(name: String, args: List[String]) -> String
     return call_bit_not(ints[0])
   elsif name == "neg"
     return call_neg(ints[0])
+  elsif name == "write_u8"
+    return call_write_u8(ints[0])
+  elsif name == "write_i8"
+    return call_write_i8(ints[0])
+  elsif name == "write_u16_be"
+    return call_write_u16_be(ints[0])
+  elsif name == "write_u16_le"
+    return call_write_u16_le(ints[0])
+  elsif name == "write_i16_be"
+    return call_write_i16_be(ints[0])
+  elsif name == "write_i16_le"
+    return call_write_i16_le(ints[0])
+  elsif name == "write_u32_be"
+    return call_write_u32_be(ints[0])
+  elsif name == "write_u32_le"
+    return call_write_u32_le(ints[0])
+  elsif name == "write_i32_be"
+    return call_write_i32_be(ints[0])
+  elsif name == "write_i32_le"
+    return call_write_i32_le(ints[0])
+  elsif name == "write_u64_be"
+    return call_write_u64_be(ints[0])
+  elsif name == "write_u64_le"
+    return call_write_u64_le(ints[0])
+  elsif name == "write_i64_be"
+    return call_write_i64_be(ints[0])
+  elsif name == "write_i64_le"
+    return call_write_i64_le(ints[0])
+  elsif name == "frame"
+    return call_frame(data)
   elsif name == "from_int"
     return call_from_int(ints[0])
   end

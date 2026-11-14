@@ -28,6 +28,9 @@ FUNCTIONS = {
     "read_u16_le", "read_u16_be", "read_u32_le", "read_u64_le", "read_i64_le", "read_i16_le",
     "read_i32_le", "read_u8", "read_i8", "read_u32_be", "read_u64_be", "read_i16_be",
     "read_i32_be", "read_i64_be", "read_frame_length", "neg", "from_list", "unwrap", "plus",
+    "write_u8", "write_i8", "write_u16_be", "write_u16_le", "write_i16_be", "write_i16_le", "write_u32_be",
+    "write_u32_le", "write_i32_be", "write_i32_le", "write_u64_be", "write_u64_le", "write_i64_be", "write_i64_le",
+    "frame",
 }
 MIN_CASES = 40
 
@@ -36,7 +39,7 @@ MIN_CASES = 40
 # function of diff/run.agc, the one that calls the builtin.
 HARNESS = {
     "main", "run_case", "arity", "takes_bytes", "parse_bytes", "result_text", "bytes_text", "error_text",
-    "parse_ints", "run_list_case",
+    "parse_ints", "run_list_case", "result_bytes_text",
 }
 PROGRAM = "diff/run.agc"
 
