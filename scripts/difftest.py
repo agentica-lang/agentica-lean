@@ -27,14 +27,17 @@ FUNCTIONS = {
     "shift_right", "shift_right_unsigned", "eq", "ne", "lt", "le", "gt", "ge", "length", "at",
     "read_u16_le", "read_u16_be", "read_u32_le", "read_u64_le", "read_i64_le", "read_i16_le",
     "read_i32_le", "read_u8", "read_i8", "read_u32_be", "read_u64_be", "read_i16_be",
-    "read_i32_be", "read_i64_be", "read_frame_length",
+    "read_i32_be", "read_i64_be", "read_frame_length", "neg", "from_list", "unwrap", "plus",
 }
 MIN_CASES = 40
 
 # The functions of diff/run.agc. A halt is a result only when the first of
 # them on the stack (from the top; frames of std/ come before) is a `call_`
 # function of diff/run.agc, the one that calls the builtin.
-HARNESS = {"main", "run_case", "arity", "takes_bytes", "parse_bytes", "result_text"}
+HARNESS = {
+    "main", "run_case", "arity", "takes_bytes", "parse_bytes", "result_text", "bytes_text", "error_text",
+    "parse_ints", "run_list_case",
+}
 PROGRAM = "diff/run.agc"
 
 RUN_TIMEOUT = 60
