@@ -89,6 +89,9 @@ scripts/difftest.py  runs both and compares
   has cases in `Diff/Main.lean`, its edges and random ones.
 - Translated files are generated: change the translator or the `.agc` source,
   never the output by hand.
+- Check the translator with probe programs run on both sides (VM and `#eval`):
+  argument evaluation order and which failure wins. Escape or refuse user
+  names that collide with emitted names or temporaries (`pure`).
 - Pin every tool and action: Lean in `lean-toolchain`, elan and actions by
   version and hash in CI.
 - Each PR says `Part of #N` or `Closes #N`.
